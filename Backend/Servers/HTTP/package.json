@@ -1,0 +1,15 @@
+{
+  "name": "past-http-server",
+  "version": "1.0.0",
+  "description": "HTTP server for P.A.S.T. Capstone project to utilize as a login server.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "echo \"No code to run\" && exit 1"
+  },
+  "author": "Samuel Howsden",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}

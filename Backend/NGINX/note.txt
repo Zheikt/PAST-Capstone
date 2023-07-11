@@ -1,0 +1,1 @@
+The nginx.conf file was sourced from https://www.nginx.com/blog/websocket-nginx/ while setting up NGINX for WebSockets

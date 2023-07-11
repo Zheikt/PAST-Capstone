@@ -1,2 +1,3 @@
-./*node_modules
-./Backend/Database/data
+node_modules
+Backend/Database/data
+package-lock.json

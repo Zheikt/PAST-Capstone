@@ -1,0 +1,1 @@
+docker exec --interactive pastbroker kafka-console-consumer --bootstrap-server pastbroker:29092 --topic <topicName> --from-beginning
