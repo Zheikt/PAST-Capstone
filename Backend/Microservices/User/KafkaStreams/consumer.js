@@ -5,7 +5,7 @@ const ssl = !!sasl;
 
 const kafka = new Kafka({
     brokers: [process.env.KAFKA_BROKER_SERVER],
-    clientId: 'past-wss-consumer',
+    clientId: 'past-user-consumer',
     ssl,
     sasl
 })

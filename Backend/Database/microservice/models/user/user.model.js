@@ -16,9 +16,22 @@ const authSchema = mongoose.Schema({
     }
 })
 
+const emailSchema = mongoose.Schema({
+    email: {
+        type: String,
+        unique: true,
+        required: true
+    },
+    verified: {
+        type: Boolean,
+        required: true,
+        default: false
+    }
+})
+
 const userSchema = new mongoose.Schema({
     id: {
-        type: Number,
+        type: mongoose.Types.ObjectId,
         unique: true,
         required: true
     },
@@ -33,7 +46,7 @@ const userSchema = new mongoose.Schema({
         required: true
     },
     email: {
-        type: Number,
+        type: emailSchema,
         unique: true,
         required: true
     },
