@@ -9,7 +9,8 @@ const queueSchema = new mongoose.Schema({
     title: {
         type: String,
         unqiue: false,
-        required: true
+        required: true,
+        default: "New Queue"
     },
     champion: {
         type: mongoose.Types.ObjectId,
@@ -19,7 +20,8 @@ const queueSchema = new mongoose.Schema({
     challengers: {
         type: [mongoose.Types.ObjectId],
         unique: false,
-        required: true
+        required: true,
+        default: []
     },
     group: {
         type: mongoose.Types.ObjectId,

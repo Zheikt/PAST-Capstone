@@ -11,7 +11,8 @@ const roleSchema = mongoose.Schema({
     title: {
         type: String,
         unique: false,
-        required: true
+        required: true,
+        default: "New Role"
     },
     permissions: {
         type: [String],
@@ -30,7 +31,8 @@ const memberSchema = mongoose.Schema({
     roles: {
         type: [roleSchema],
         unique: false,
-        required: true
+        required: true,
+        default: []
     },
     nickname: {
         type: String,
@@ -48,22 +50,26 @@ const eventSchema = mongoose.Schema({
     title: {
         type: String,
         unique: false,
-        required: true
+        required: true,
+        default: "New Event"
     },
     startDate: {
         type: Number,
         unique: false,
-        required: true
+        required: true,
+        default: Date.now()
     },
     endDate: {
         type: Number,
         unique: false,
-        required: true
+        required: true,
+        default: Date.now() + 86_400_000 //now + 24 hours
     },
     participants: {
         type: [mongoose.Types.ObjectId],
         unique: false,
-        required: true
+        required: true,
+        default: []
     }
 });
 
@@ -76,7 +82,8 @@ const channelSchema = mongoose.Schema({
     name: {
         type: String,
         unique: true,
-        required: true
+        required: true,
+        default: "New Channel"
     },
     roleRestrictions: {
         type: [roleSchema],
@@ -87,7 +94,8 @@ const channelSchema = mongoose.Schema({
     blacklist: {
         type: [mongoose.Types.ObjectId],
         unique: false,
-        required: true
+        required: true,
+        default: []
     },
     messages: {
         type: [messageSchema],
@@ -106,37 +114,44 @@ const groupSchema = new mongoose.Schema({
     name: {
         type: String,
         unqiue: true,
-        required: true
+        required: true,
+        default: "New Group"
     },
     members: { 
         type: [memberSchema],
         unique: false,
-        required: true
+        required: true,
+        default: []
     },
     roles: { //Different available roles
         type: [roleSchema],
         unique: false,
-        required: true
+        required: true,
+        default: []
     },
     queue: {
         type: [queueSchema],
         unique: false,
-        required: false
+        required: false,
+        default: []
     },
     events: {
         type: [eventSchema],
         unique: false,
-        required: false
+        required: false,
+        default: []
     },
     statBlock: {
         type: Object,
         unique: false,
-        required: false
+        required: false,
+        default: {}
     },
     channels: {
         type: [channelSchema],
         unique: false,
-        required: true
+        required: true,
+        default: []
     }
 });
 

@@ -9,9 +9,10 @@ const authSchema = mongoose.Schema({
         required: true
     },
     validUntil: {
-        type: Date,
+        type: Number,
         unique: false,
-        required: true
+        required: true,
+        default: Date.now() + 86_400_000
     }
 })
 
@@ -39,22 +40,26 @@ const userSchema = new mongoose.Schema({
     stats: { //manually tell the db that this has changed
         type: Array,
         unique: false,
-        required: true
+        required: true,
+        default: []
     },
     validAuthTokens: {
         type: [authSchema],
         unique: false,
-        required: true
+        required: true,
+        default: []
     },
     validEmailVerificationRoutes: {
         type: [linkSchema],
         unique: false,
-        required: true
+        required: true,
+        default: []
     },
     validPasswordVerificationRoutes: {
         type: [linkSchema],
         unique: false,
-        required: true
+        required: true,
+        default: []
     }
 });
 

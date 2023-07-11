@@ -17,9 +17,10 @@ const generatedLinkSchema = mongoose.Schema({
         required: true
     },
     validUntil: {
-        type: Date,
+        type: Number,
         unique: false,
-        required: true
+        required: true,
+        default: Date.now() + 900_000 //now + 15 minutes
     }
 });
 

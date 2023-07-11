@@ -19,7 +19,8 @@ const msgCodeLength = 7;
 
 let pendingResponses = [];
 //#endregion
-makeConsumer();
+
+setTimeout(() => makeConsumer(), 15000); //wait until Kafka is up
 
 wss.on('connection', function(ws) {
     //Do login/token auth
