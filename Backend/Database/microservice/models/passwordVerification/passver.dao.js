@@ -1,25 +1,21 @@
 const mongoose = require('mongoose');
-const schema = require('./user.model')
+const schema = require('./passver.model')
 
 schema.statics = {
     create: function(data, callback) 
     {
         const document = new this(data);
-        document.save().then(callback);
+        document.save(callback);
     },
     read: function(query) 
     {
         return this.find(query);
     },
-    update: function(query, data, callback) 
-    {
-        this.updateOne(query, {$set: data}).then(callback);
-    },
     delete: function(query, callback) 
     {
-        this.deleteOne(query).then(callback);
+        this.findOneAndDelete(query, callback);
     }
 };
 
-const model = mongoose.model('User', schema);
+const model = mongoose.model('passwordVerification', schema);
 module.exports = model;

@@ -57,6 +57,14 @@ services:
     container_name: pastnginx
     ports:
       - "2024:80"
+  pastmongoservice:
+    build: ./Database/microservice
+    environment:
+      - KAFKA_BROKER_SERVER=pastbroker:29092
+      - MONGOIPADDRESS=pastmongo:27017
+    depends_on:
+      - pastmongo
+      - broker
   pastuserservice:
     build: ./Microservices/User
     environment:

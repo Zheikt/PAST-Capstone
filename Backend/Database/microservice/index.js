@@ -1,135 +1,225 @@
 "use strict";
 const db = require('./db');
 const mongoose = require('mongoose');
-const User = require('./models/user.dao');
-const Group = require('./models/group.dao');
-const Queue = require('./models/queue.dao');
-const Message = require('./models/message.dao');
+const User = require('./models/user/user.dao');
+const Group = require('./models/group/group.dao');
+const Queue = require('./models/queue/queue.dao');
+const Message = require('./models/message/message.dao');
+const EmailVer = require('./models/emailVerification/emailver.dao');
+const PassVer = require('./models/passwordVerification/passver.dao');
 const ConsumerImport = require('./streams/consumer');
+const ProducerImport = require('./streams/producer');
+const { ResourcePatternTypes } = require('kafkajs');
 
-//setTimeout(() => db(), 15000); //waits a little for the mongodb instance to spin up
+setTimeout(() => db(), 20000); //waits a little for the mongodb instance to spin up
 
 const consumer = ConsumerImport.consumer({
     groupId: 'mongo-consumer-group'
 });
 
-//Anime and Studio need to be replaced throughout
+const producer = ProducerImport.producer();
 
-async function main(){
+async function main() {
     await consumer.connect();
-    await consumer.subscribe({topics: ['anime', 'studio']});
+    await consumer.subscribe({ topics: ['mongo'] });
     await consumer.run({
         eachMessage: async ({ topic, partition, message, heartbeat, pause }) => {
-            switch (topic) {
-                case 'anime':
-                    var anime = JSON.parse(message.value);
-                    AnimeDBOperations(anime, message.key.toString());
+            let messageObj;
+            try {
+                messageObj = JSON.parse(message.value);
+            } catch (ex) {
+                console.log(ex);
+                return //sendMessage
+            }
+            console.log(message.key.toString());
+            console.log(messageObj);
+            let keyParts = message.key.toString().split('--', 2);
+            let operation = keyParts[0];
+            let msgCode = keyParts[1];
+            switch (operation) {
+                case 'get-user':
+                    GetUser(messageObj.userId, msgCode)
                     break;
-                case 'studio':
-                    console.log(JSON.stringify(message));
-                    var studio = JSON.parse(message.value);
-                    StudioDBOperations(studio, message.key.toString());
+                case 'create-user':
+                    CreateUser(messageObj, msgCode);
+                    break;
+                case 'delete-user':
+                    DeleteUser(messageObj.userId, msgCode)
+                    break;
+                case 'verify-email':
+                    VerifyEmail(messageObj.route, msgCode);
+                    break;
+                case 'change-email':
+                    ChangeEmail(messageObj, msgCode);
+                    break;
+                case 'change-username':
+                    ChangeUsername(messageObj, msgCode);
+                    break;
+                case 'change-password':
+                    ChangePassword(messageObj, msgCode);
+                    break;
+                case 'login':
+                    CheckLogin(messageObj, msgCode);
+                    break;
+                default:
+                    console.log("No match found. Key: " + message.key);
                     break;
             }
         }
     })
 }
 
-function AnimeDBOperations(anime, key){
-    switch(key){
-        case "create-anime": //also update related studio with anime
-            Anime.create(anime, function(err, res){
-                if(err){
-                    console.log("Error creating anime. Error: " + err);
-                } else {
-                    console.log("Anime created succesfully");
-                    Studio.read({'id': anime.studio}).then((result) => {
-                        let animeMade = result[0]._doc.animeMade.map(elem => elem);
-                        animeMade.push(anime.id);
-                        Studio.updateOne({'id': anime.studio}, {$set: {'animeMade': animeMade}}, function(err, updResult){
-                            if(err){
-                                console.log("Error updating studio. Error: ", err);
-                            } else {
-                                console.log("Studio updated successfully");
-                            }
+function GetUser(queryId, msgCode){
+    User.read({id: queryId}).then(res => {
+        console.log(res);
+        if(res.length == 0)
+        {
+            sendMessage('user', 'mongo-error-response', {type: 'user-error', message: 'No user found with id: ' + queryId})
+        }
+        else 
+        {
+            sendMessage('user', 'mongo-response', {operation: 'get-user', response: res, status: 'success', 'msgCode': msgCode});
+        }
+    })
+}
+
+function CreateUser(user, msgCode){
+    User.create(user, function(res, err){
+        console.log(err);
+        console.log(res);
+        if(err){
+            console.log(err);
+            sendMessage('user', 'mongo-error-response', {type: 'mongo-error', message: err, 'msgCode': msgCode})
+        } else {
+            sendMessage('user', 'mongo-response', {operation: 'create-user', response: res, status: 'success', 'msgCode': msgCode})
+        }
+    })
+}
+
+function DeleteUser(queryId, msgCode){
+    User.delete({id: queryId}, function(res){
+        console.log(res);
+        if(res.deletedCount == 0){
+            sendMessage('user', 'mongo-error-response', {type: 'mongo-error', message: 'No user found with id: ' + queryId, 'msgCode': msgCode})
+        } else {
+            sendMessage('user', 'mongo-response', {operation: 'delete-user', response: res, status: 'success', 'msgCode': msgCode})
+        }
+    })
+}
+
+function VerifyEmail(queryRoute, msgCode){
+    console.log(queryRoute);
+    EmailVer.read({route: queryRoute}).then(res => {
+        console.log(res);
+        if(res.length == 0)
+        {
+            sendMessage('user', 'mongo-error-response', {type: 'user-error', message: 'No object with matching route found'});
+        }
+        else
+        {
+            let evObj = res[0];
+            if(evObj.validUntil <= Date.now())
+            {
+                sendMessage('user', 'mongo-error-response', {type: 'expiry-error', message: 'Route has expired'});
+                //Should the entry be deleted?
+                return;
+            } 
+            else
+            {
+                User.update({id: res.relatedObject}, {'email.verified': true}, function(innerRes){
+                    if(innerRes.matchedCount == 0){
+                        sendMessage('user', 'mongo-error-response', {type: 'user-error', message: 'No user found with id: ' + res.relatedObject, 'msgCode': msgCode})
+                    } else {
+                        sendMessage('user', 'mongo-response', {operation: 'verify-email', response: res, status: 'success', 'msgCode': msgCode})
+                        EmailVer.delete({route: queryRoute}, function(res){
+                            console.log(res);
                         })
-                    })
-                }
+                    }
+                })
+            }
+        }
+    })
+}
+
+function ChangeEmail(data, msgCode){
+    User.update({id: data.userId}, {email: {email: data.newEmail, verified: false}}, function(res){
+        console.log(res);
+        if(res.matchedCount == 0){
+            sendMessage('user', 'mongo-error-response', {type: 'mongo-error', message: 'No user found with id: ' + data.userId, 'msgCode': msgCode})
+        } else {
+            sendMessage('user', 'mongo-response', {operation: 'change-email', response: res, status: 'success', 'msgCode': msgCode})
+            EmailVer.deleteMany({relatedObject: data.userId}, function(res){
+                console.log(res);
             })
-            break;
-        case "update-anime":
-            Anime.updateOne({'id': anime.id}, anime, function(err, res){
-                if(err){
-                    console.log("Error updating anime. Error: ", err);
-                } else {
-                    console.log("Anime updated successfully");
+        }
+    })
+}
+
+function ChangeUsername(data, msgCode){
+    User.update({id: data.userId}, {username: data.username}, function(res){
+        console.log(res);
+        if(res.matchedCount == 0){
+            sendMessage('user', 'mongo-error-response', {type: 'user-error', message: 'No user found with id: ' + data.userId, 'msgCode': msgCode})
+        } else {
+            sendMessage('user', 'mongo-response', {operation: 'change-username', response: res, status: 'success', 'msgCode': msgCode})
+        }
+    })
+}
+
+function ChangePassword(data, msgCode){
+    if(data.route){
+        PassVer.read({route: data.route}).then(function(res){
+            console.log(res);
+            if(res.length == 0){
+                sendMessage('user', 'mongo-error-response', {type: 'mongo-error', message: 'Invalid route', 'msgCode': msgCode})
+            } else {
+                let pvObj = res[0];
+                if(pvObj.validUntil < Date.now())
+                {
+                    sendMessage('user', 'mongo-error-response', {type: 'expiry-error', message: 'Route has expired'})
+                    return;
                 }
-            })
-            break;
-        case "delete-anime": //remove anime from its studio's list
-            Anime.delete({'id': anime.id}, function(err, result){
-                if(err){
-                    console.log("Error deleting Anime. Error: ", err);
-                } else{
-                    console.log("Anime deleted successfully");
-                    Studio.read({'id': result.studio}).then((innerResult) => {
-                        let animeMade = innerResult[0]._doc.animeMade.map(elem => elem);
-                        animeMade.splice(animeMade.indexOf(anime.id), 1);
-                        Studio.updateOne({'id': result.studio}, {$set: {'animeMade': animeMade}}, function(err, updResult){
-                            if(err){
-                                console.log("Error updating studio. Error: ", err);
-                            } else {
-                                console.log("Studio updated successfully");
-                            }
-                        })
-                    })
-                }
-            })
-            break;
+                ChangePasswordOperation(res.relatedObject);
+                PassVer.delete({route: data.route}, function(res){
+                    console.log('Delete PassVer after change: ' + res);
+                })
+            }
+        })
+    } else {
+        ChangePasswordOperation(data.userId, msgCode);
     }
 }
 
-function StudioDBOperations(studio, key){
-    console.log(key);
-    switch(key){
-        case "create-studio":
-            Studio.create(studio, function(err, res){
-                if(err){
-                    console.log("Error creating studio. Error: " + err);
-                } else {
-                    console.log("Studio created succesfully");
-                }
-            })
-            break;
-        case "update-studio":
-            Studio.updateOne({id: studio.id}, studio, function(err, res){
-                if(err){
-                    console.log("Error updating studio. Error: ", err);
-                } else {
-                    console.log("Studio updated successfully");
-                }
-            })
-            break;
-        case "delete-studio": //make sure to remove all references to the studio from its anime (should this delete the anime also?)
-            Studio.delete({id: studio.id}, function(err, result){
-                if(err){
-                    console.log("Error deleting studio. Error: ", err);
-                } else{
-                    console.log("Studio deleted successfully");
-                    console.log(JSON.stringify(result));
-                    for(let iter = 0; iter < result.animeMade.length; iter++){
-                        Anime.findOneAndUpdate({'id': result.animeMade[iter]}, {$set: {'studio': -1}}, function(err, result){
-                            if(err){
-                                console.log('Error updating anime. Error: ' + err);
-                            } else {
-                                console.log("Anime updated successfully")
-                            }
-                        })
-                    }
-                }
-            })
-            break;
-    }
+function CheckLogin(data, msgCode){
+    User.read({id: data.userId, username: data.username, password: data.password}).then(function(res){
+        console.log(res);
+        if(res.length == 0){
+            sendMessage('user', 'mongo-error-response', {type: 'user-error', message: 'Login Failed', 'msgCode': msgCode})
+        } else {
+            sendMessage('user', 'mongo-response', {operation: 'login', response: res, status: 'success', 'msgCode': msgCode})
+        }
+    })
+}
+
+function ChangePasswordOperation(queryId, msgCode){
+    User.update({id: queryId}, {username: data.username}, function(res){
+        console.log(res);
+        if(res.matchedCount){
+            sendMessage('user', 'mongo-error-response', {type: 'user-error', message: 'No user found with id:' + queryId, 'msgCode': msgCode})
+        } else {
+            sendMessage('user', 'mongo-response', {operation: 'change-password', response: res, status: 'success', 'msgCode': msgCode})
+        }
+    })
+}
+
+async function sendMessage(targetService, operation, data) {
+    await producer.connect();
+    producer.send({
+        topic: targetService,
+        messages: [
+            { key: `${operation}`, value: JSON.stringify(data) }
+        ]
+    });
 }
 
 main();

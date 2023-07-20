@@ -72,22 +72,21 @@ async function sendMessage(targetService, operation, data, senderSocket){
 async function makeConsumer()
 {
     await consumer.connect();
-    await consumer.subscribe({topics: ['user', 'group', 'message', 'queue']});
+    await consumer.subscribe({topics: ['wss']});
     await consumer.run({
         eachMessage: async ({ topic, partition, message, heartbeat, pause }) => {
             //message.key and message.value
-            console.log(message);
-            let msgCode = message.key.toString().substring(msgCodeLength + 1);
-            switch (topic) {
-                case 'user':
-                    break;
-                case 'group':
-                    break;
-                case 'message':
-                    break;
-                case 'queue':
-                    break;
-            }
+            let messageObj = JSON.parse(message.value);
+            console.log(messageObj);
+            let msgCode = messageObj.msgCode;
+            console.log(msgCode);
+            let msgObj = pendingResponses.find(elem => elem.msgCode == msgCode);
+            let ws = msgObj.sender;
+            console.log(msgObj);
+            console.log(pendingResponses);
+            
+            ws.send(JSON.stringify(messageObj.data))
+
             pendingResponses = pendingResponses.filter(elem => elem.msgCode !== msgCode);
         }
     })

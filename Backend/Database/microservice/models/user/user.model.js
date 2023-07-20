@@ -12,7 +12,7 @@ const authSchema = mongoose.Schema({
         type: Number,
         unique: false,
         required: true,
-        default: Date.now() + 86_400_000
+        default: Date.now() + 86_400_000 //valid for 1 day
     }
 })
 
@@ -31,7 +31,7 @@ const emailSchema = mongoose.Schema({
 
 const userSchema = new mongoose.Schema({
     id: {
-        type: mongoose.Types.ObjectId,
+        type: String,
         unique: true,
         required: true
     },
@@ -58,18 +58,6 @@ const userSchema = new mongoose.Schema({
     },
     validAuthTokens: {
         type: [authSchema],
-        unique: false,
-        required: true,
-        default: []
-    },
-    validEmailVerificationRoutes: {
-        type: [linkSchema],
-        unique: false,
-        required: true,
-        default: []
-    },
-    validPasswordVerificationRoutes: {
-        type: [linkSchema],
         unique: false,
         required: true,
         default: []

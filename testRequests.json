@@ -1,0 +1,95 @@
+{
+    "userRequests": [
+        {
+            "service": "user",
+            "operation": "create",
+            "data": {
+                "username": "Creator",
+                "password": "4132jflkhefa732==",
+                "email": {
+                    "email": "creator@past.com",
+                    "verified": false
+                },
+                "stats": [],
+                "validAuthTokens": []
+            }
+        },
+        {
+            "service": "user",
+            "operation": "get",
+            "data": {
+                "userId": "u-991i"
+            }
+        },
+        {
+            "service": "user",
+            "operation": "delete",
+            "data": {
+                "userId": "u-991i"
+            }
+        },
+        {
+            "service": "user",
+            "operation": "verify-email",
+            "data": {
+                "route": "e2aF92Vofn"
+            }
+        },
+        {
+            "service": "user",
+            "operation": "change-email",
+            "data": {
+                "userId": "u-991i",
+                "newEmail": "TheCreator@past.com"
+            }
+        },
+        {
+            "service": "user",
+            "operation": "change-username",
+            "data": {
+                "userId": "u-991i",
+                "username": "TheCreator"
+            }
+        },
+        {
+            "service": "user",
+            "operation": "change-password",
+            "data": {
+                "route": "p23YwhU881",
+                "newPassword": "4132jflkhefa732=="
+            }
+        },
+        {
+            "service": "user",
+            "operation": "change-password",
+            "data": {
+                "userId": "u-991i",
+                "newPassword": "4132jflkhefa732=="
+            }
+        },
+        {
+            "service": "user",
+            "operation": "login",
+            "data": {
+                "userId": "u-991i",
+                "username": "TheCreator",
+                "password": "4132jflkhefa732=="
+            }
+        }
+    ],
+    "groupRequests": [
+
+    ],
+    "queueRequsts": [
+
+    ],
+    "messageRequests": [
+
+    ],
+    "authRequests": [
+
+    ],
+    "emailRequests": [
+        
+    ]
+}
