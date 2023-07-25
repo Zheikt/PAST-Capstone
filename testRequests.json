@@ -75,6 +75,14 @@
                 "username": "TheCreator",
                 "password": "4132jflkhefa732=="
             }
+        },
+        {
+            "service": "user",
+            "operation": "login",
+            "data": {
+                "userId": "u-991i",
+                "authToken": "238JfuUhae03oswja3La"
+            }
         }
     ],
     "groupRequests": [

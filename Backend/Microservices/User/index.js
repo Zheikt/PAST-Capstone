@@ -158,6 +158,7 @@ function ChangeEmail(data, msgCode) {
 
     if (valid) {
         sendMessage('mongo', 'change-email--' + msgCode, data);
+        sendMessage('email', 'verify-email', {email: data.newEmail, id: data.userId})
     } else {
         sendMessage('wss', 'error--' + msgCode, { type: "bad-format", message: "Request improperly formatted", 'msgCode': msgCode })
     }

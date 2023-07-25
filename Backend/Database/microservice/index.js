@@ -11,7 +11,7 @@ const ConsumerImport = require('./streams/consumer');
 const ProducerImport = require('./streams/producer');
 const { ResourcePatternTypes } = require('kafkajs');
 
-setTimeout(() => db(), 20000); //waits a little for the mongodb instance to spin up
+setTimeout(() => {db(); main();}, 20000); //waits a little for the mongodb instance to spin up
 
 const consumer = ConsumerImport.consumer({
     groupId: 'mongo-consumer-group'
@@ -61,6 +61,10 @@ async function main() {
                 case 'login':
                     CheckLogin(messageObj, msgCode);
                     break;
+                case 'create-email-verification':
+                    break;
+                case 'create-password-verification':
+                    break;
                 default:
                     console.log("No match found. Key: " + message.key);
                     break;
@@ -69,6 +73,7 @@ async function main() {
     })
 }
 
+//#region User Operations
 function GetUser(queryId, msgCode){
     User.read({id: queryId}).then(res => {
         console.log(res);
@@ -126,13 +131,13 @@ function VerifyEmail(queryRoute, msgCode){
             } 
             else
             {
-                User.update({id: res.relatedObject}, {'email.verified': true}, function(innerRes){
+                User.update({id: evObj.relatedObject}, {'email.verified': true}, function(innerRes){
                     if(innerRes.matchedCount == 0){
                         sendMessage('user', 'mongo-error-response', {type: 'user-error', message: 'No user found with id: ' + res.relatedObject, 'msgCode': msgCode})
                     } else {
                         sendMessage('user', 'mongo-response', {operation: 'verify-email', response: res, status: 'success', 'msgCode': msgCode})
-                        EmailVer.delete({route: queryRoute}, function(res){
-                            console.log(res);
+                        EmailVer.delete({route: queryRoute}, function(delRes){
+                            console.log(delRes);
                         })
                     }
                 })
@@ -176,21 +181,22 @@ function ChangePassword(data, msgCode){
                 let pvObj = res[0];
                 if(pvObj.validUntil < Date.now())
                 {
-                    sendMessage('user', 'mongo-error-response', {type: 'expiry-error', message: 'Route has expired'})
+                    sendMessage('user', 'mongo-error-response', {type: 'expiry-error', message: 'Route has expired', 'msgCode': msgCode})
                     return;
                 }
-                ChangePasswordOperation(res.relatedObject);
+                ChangePasswordOperation({userId: pvObj.relatedObject, newPassword: data.newPassword}, msgCode);
                 PassVer.delete({route: data.route}, function(res){
                     console.log('Delete PassVer after change: ' + res);
                 })
             }
         })
     } else {
-        ChangePasswordOperation(data.userId, msgCode);
+        ChangePasswordOperation(data, msgCode);
     }
 }
 
 function CheckLogin(data, msgCode){
+    console.log(data);
     User.read({id: data.userId, username: data.username, password: data.password}).then(function(res){
         console.log(res);
         if(res.length == 0){
@@ -201,14 +207,28 @@ function CheckLogin(data, msgCode){
     })
 }
 
-function ChangePasswordOperation(queryId, msgCode){
-    User.update({id: queryId}, {username: data.username}, function(res){
+function ChangePasswordOperation(data, msgCode){
+    console.log(data);
+    User.update({id: data.userId}, {password: data.newPassword}, function(res){
         console.log(res);
-        if(res.matchedCount){
-            sendMessage('user', 'mongo-error-response', {type: 'user-error', message: 'No user found with id:' + queryId, 'msgCode': msgCode})
+        if(res.matchedCount == 0){
+            sendMessage('user', 'mongo-error-response', {type: 'user-error', message: 'No user found with id:' + data.userId, 'msgCode': msgCode})
         } else {
             sendMessage('user', 'mongo-response', {operation: 'change-password', response: res, status: 'success', 'msgCode': msgCode})
         }
+    })
+}
+//#endregion
+
+function CreateEmailVerifications(data){
+    EmailVer.create(data, function(res){
+        console.log("Created Email Ver: " + res);
+    })
+}
+
+function CreatePasswordVerifications(data){
+    PassVer.create(data, function(res){
+        console.log("Created Email Ver: " + res);
     })
 }
 
@@ -221,5 +241,3 @@ async function sendMessage(targetService, operation, data) {
         ]
     });
 }
-
-main();

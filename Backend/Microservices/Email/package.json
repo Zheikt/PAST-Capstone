@@ -1,15 +1,15 @@
 {
-  "name": "pastgroupmicroservice",
+  "name": "pastemailmicroservice",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node index"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Samuel Howsden",
   "license": "ISC",
   "dependencies": {
-    "kafkajs": "^2.2.4"
+    "kafkajs": "^2.2.4",
+    "nodemailer": "^6.9.4"
   }
 }

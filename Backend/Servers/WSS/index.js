@@ -85,7 +85,7 @@ async function makeConsumer()
             console.log(msgObj);
             console.log(pendingResponses);
             
-            ws.send(JSON.stringify(messageObj.data))
+            ws.send(JSON.stringify(message.key.toString() == 'success' ? messageObj.data : messageObj.reason));
 
             pendingResponses = pendingResponses.filter(elem => elem.msgCode !== msgCode);
         }
