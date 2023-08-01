@@ -36,7 +36,8 @@ wss.on('connection', function(ws) {
             ws.send("Body not formatted as JSON string");
         }
         console.log(data);
-        sendMessage("user", "create", JSON.parse(data), this)
+
+        sendMessage(data.service, data.operation, data, this)
     });
 });
 

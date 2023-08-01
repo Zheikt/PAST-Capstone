@@ -45,9 +45,9 @@ services:
     ports:
       - "2023:2001"
     environment:
-      - API_PORT=2024
       - KAFKA_BROKER_SERVER=pastbroker:29092
       - NGINX_PORT=2024
+      - MONGOIPADDRESS=pastmongo:27017
     depends_on:
       - broker
       - nginx
@@ -67,6 +67,16 @@ services:
       - broker
   pastuserservice:
     build: ./Microservices/User
+    environment:
+      - API_PORT=2024
+      - KAFKA_BROKER_SERVER=pastbroker:29092
+      - NGINX_PORT=2024
+    depends_on:
+      - broker
+      - nginx
+      - pastmongo
+  pastgroupservice:
+    build: ./Microservices/Group
     environment:
       - API_PORT=2024
       - KAFKA_BROKER_SERVER=pastbroker:29092

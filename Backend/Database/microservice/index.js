@@ -62,8 +62,10 @@ async function main() {
                     CheckLogin(messageObj, msgCode);
                     break;
                 case 'create-email-verification':
+                    CreateEmailVerifications(messageObj);
                     break;
                 case 'create-password-verification':
+                    CreatePasswordVerifications(messageObj);
                     break;
                 default:
                     console.log("No match found. Key: " + message.key);
@@ -127,6 +129,9 @@ function VerifyEmail(queryRoute, msgCode){
             {
                 sendMessage('user', 'mongo-error-response', {type: 'expiry-error', message: 'Route has expired'});
                 //Should the entry be deleted?
+                EmailVer.delete({route: queryRoute}, function(delRes){
+                    console.log(delRes);
+                })
                 return;
             } 
             else
@@ -239,5 +244,5 @@ async function sendMessage(targetService, operation, data) {
         messages: [
             { key: `${operation}`, value: JSON.stringify(data) }
         ]
-    });
+    }).then(res => console.log("SendMessage Promise: " + res));
 }

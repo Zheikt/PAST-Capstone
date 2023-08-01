@@ -5,12 +5,13 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "echo \"No code to run\" && exit 1"
+    "start": "node index"
   },
   "author": "Samuel Howsden",
   "license": "ISC",
   "dependencies": {
     "express": "^4.18.2",
-    "kafkajs": "^2.2.4"
+    "kafkajs": "^2.2.4",
+    "mongoose": "^7.4.1"
   }
 }

@@ -86,7 +86,49 @@
         }
     ],
     "groupRequests": [
-
+        {
+            "service": "group",
+            "operation": "create",
+            "data": {
+                "name": "Pool Table",
+                "statBlock": {
+                    "gamesPlayed": 0,
+                    "shotsAttempted": 0,
+                    "shotsMade": 0,
+                    "averageGameTime": 0,
+                    "ladderRank": 1
+                }
+            }
+        },
+        {
+            "service": "group",
+            "operation": "get",
+            "data": {
+                "groupId": "g-fs7C"
+            }
+        },
+        {
+            "service": "group",
+            "operation": "get-user-groups",
+            "data": {
+                "userId": "u-991i"
+            }
+        },
+        {
+            "service": "group",
+            "operation": "join-group",
+            "data": {
+                "userId": "u-991i"
+            }
+        },
+        {
+            "service": "group",
+            "operation": "change-group-name",
+            "data": {
+                "groupId": "g-fs7C",
+                "name": "Billiard's Club"
+            }
+        }
     ],
     "queueRequsts": [
 
