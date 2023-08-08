@@ -1,6 +1,6 @@
 FROM node:16
 
-WORKDIR /pastuserservice/v1
+WORKDIR /pastgroupservice/v1
 
 COPY package*.json ./
 

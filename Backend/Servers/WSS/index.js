@@ -22,19 +22,50 @@ let pendingResponses = [];
 
 setTimeout(() => makeConsumer(), 15000); //wait until Kafka is up
 
+//requests that need to propagate across multiple sockets
+/*
+|Group Level| (Propagate across a group)
+- Message Send
+- Message Edit
+- Message Delete
+- Add User to Group
+- Remove User from Group
+- User Nickname changes
+- User Name changes
+- Add Role to User
+- Remove Role from User
+- Add Message Channel
+- Delete Message Channel
+- Rename Group
+- Rename Message Channel
+- Enqueue User
+- Dequeue User
+*/
+
+//Requests that require multiple messages
+/*
+- Delete Group (Group, Message Channels, Messages, Queues, User (stats))
+- Delete User (User, Group, Queues, Message (change sender to "deleted user"))
+- Delete Message Channel (Message Channel, Group, Messages)
+*/
+
 wss.on('connection', function(ws) {
     //Do login/token auth
 
+    //Save socket, userId, and array of joined groups
         ws.on('message', function(message) {
         console.log('Received from client: %s', message);
         ws.send('Server received from client: ' + message);
         let data;
         try{
             data = JSON.parse(message);
+            data = JSON.parse(data);
         } catch (ex){
             console.log(ex);
             ws.send("Body not formatted as JSON string");
+            return;
         }
+
         console.log(data);
 
         sendMessage(data.service, data.operation, data, this)
@@ -42,6 +73,7 @@ wss.on('connection', function(ws) {
 });
 
 async function sendMessage(targetService, operation, data, senderSocket){
+    console.log(data);
     let body = data;
     let msgCode = '';
     
@@ -86,7 +118,7 @@ async function makeConsumer()
             console.log(msgObj);
             console.log(pendingResponses);
             
-            ws.send(JSON.stringify(message.key.toString() == 'success' ? messageObj.data : messageObj.reason));
+            ws.send(JSON.stringify(message.key.toString() == 'success' ? messageObj.data : message.key.toString().startsWith('error') ? messageObj.message : messageObj.reason));
 
             pendingResponses = pendingResponses.filter(elem => elem.msgCode !== msgCode);
         }

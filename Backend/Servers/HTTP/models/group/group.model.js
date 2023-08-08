@@ -1,9 +1,8 @@
 const mongoose = require('mongoose');
-const queueSchema = require('../queue/queue.model');
 
 const roleSchema = mongoose.Schema({
     id: {
-        type: mongoose.Types.ObjectId,
+        type: String,
         unique: true,
         required: true
     },
@@ -23,12 +22,12 @@ const roleSchema = mongoose.Schema({
 
 const memberSchema = mongoose.Schema({
     userId: {
-        type: mongoose.Types.ObjectId,
+        type: String,
         unique: false,
         required: true
     },
     roles: {
-        type: [roleSchema],
+        type: [String],
         unique: false,
         required: true,
         default: []
@@ -42,7 +41,7 @@ const memberSchema = mongoose.Schema({
 
 const eventSchema = mongoose.Schema({
     id: {
-        type: mongoose.Types.ObjectId,
+        type: String,
         unique: true,
         required: true
     },
@@ -65,7 +64,7 @@ const eventSchema = mongoose.Schema({
         default: Date.now() + 86_400_000 //now + 24 hours
     },
     participants: {
-        type: [mongoose.Types.ObjectId],
+        type: [String],
         unique: false,
         required: true,
         default: []
@@ -97,7 +96,7 @@ const groupSchema = new mongoose.Schema({
         default: []
     },
     queue: {
-        type: [queueSchema],
+        type: [String],
         unique: false,
         required: false,
         default: []

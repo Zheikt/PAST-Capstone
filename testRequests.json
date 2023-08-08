@@ -97,7 +97,9 @@
                     "shotsMade": 0,
                     "averageGameTime": 0,
                     "ladderRank": 1
-                }
+                },
+                "creatorId": "u-991i",
+                "creatorUsername": "Creator"
             }
         },
         {
@@ -118,7 +120,17 @@
             "service": "group",
             "operation": "join-group",
             "data": {
-                "userId": "u-991i"
+                "userId": "u-991i",
+                "groupId": "g-fs7C",
+                "username": "Creator"
+            }
+        },
+        {
+            "service": "group",
+            "operation": "leave-group",
+            "data": {
+                "userId": "u-991i",
+                "groupId": "g-fs7C"
             }
         },
         {

@@ -13,18 +13,18 @@ const queueSchema = new mongoose.Schema({
         default: "New Queue"
     },
     champion: {
-        type: mongoose.Types.ObjectId,
+        type: String,
         unique: false,
         required: true
     },
     challengers: {
-        type: [mongoose.Types.ObjectId],
+        type: [String],
         unique: false,
         required: true,
         default: []
     },
     group: {
-        type: mongoose.Types.ObjectId,
+        type: String,
         unique: false,
         required: true
     }

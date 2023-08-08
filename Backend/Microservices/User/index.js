@@ -1,11 +1,10 @@
-const kafka = require('./KafkaStreams/consumer');
 const kafka_cons = require('./KafkaStreams/consumer');
 const kafka_pro = require('./KafkaStreams/producer');
 
 const consumer = kafka_cons.consumer({ groupId: "past-user-consumer-group" });
 const producer = kafka_pro.producer();
 
-setTimeout((() => createConsumer()), 10000);
+setTimeout((() => createConsumer()), 15000);
 
 async function createConsumer() {
     await consumer.connect();
@@ -27,43 +26,39 @@ async function createConsumer() {
             let switchTarget = message.key.toString();
             if(!switchTarget.startsWith('mongo')) {switchTarget = messageObj.operation;}
             console.log(switchTarget);
-            switch (topic) {
-                case 'user':
-                    switch (switchTarget) {
-                        case 'get':
-                            GetUser(messageObj.data, msgCode);
-                            break;
-                        case 'create':
-                            CreateAccount(messageObj.data, msgCode)
-                            break;
-                        case 'delete':
-                            DeleteAccount(messageObj.data, msgCode);
-                            break;
-                        case 'verify-email':
-                            VerifyEmail(messageObj.data, msgCode);
-                            break;
-                        case 'change-email':
-                            ChangeEmail(messageObj.data, msgCode);
-                            break;
-                        case 'change-username':
-                            ChangeUsername(messageObj.data, msgCode);
-                            break;
-                        case 'change-password':
-                            ChangePassword(messageObj.data, msgCode);
-                            break;
-                        case 'login':
-                            CheckLogin(messageObj.data, msgCode);
-                            break;
-                        case 'mongo-response':
-                            sendMessage('wss', 'success', {"msgCode": msgCode, data: messageObj['response']})
-                            break;
-                        case 'mongo-error-response':
-                            sendMessage('wss', 'failure', {"msgCode": msgCode, reason: messageObj['message']})
-                            break;
-                        default:
-                            sendMessage('wss', 'error', { "msgCode": msgCode, type: 'bad-operation', message: 'Invalid Operation' })
-                            break;
-                    }
+            switch (switchTarget) {
+                case 'get':
+                    GetUser(messageObj.data, msgCode);
+                    break;
+                case 'create':
+                    CreateAccount(messageObj.data, msgCode)
+                    break;
+                case 'delete':
+                    DeleteAccount(messageObj.data, msgCode);
+                    break;
+                case 'verify-email':
+                    VerifyEmail(messageObj.data, msgCode);
+                    break;
+                case 'change-email':
+                    ChangeEmail(messageObj.data, msgCode);
+                    break;
+                case 'change-username':
+                    ChangeUsername(messageObj.data, msgCode);
+                    break;
+                case 'change-password':
+                    ChangePassword(messageObj.data, msgCode);
+                    break;
+                case 'login':
+                    CheckLogin(messageObj.data, msgCode);
+                    break;
+                case 'mongo-response':
+                    sendMessage('wss', 'success', {"msgCode": msgCode, data: messageObj['response']})
+                    break;
+                case 'mongo-error-response':
+                    sendMessage('wss', 'failure', {"msgCode": msgCode, reason: messageObj['message']})
+                    break;
+                default:
+                    sendMessage('wss', 'error', { "msgCode": msgCode, type: 'bad-operation', message: 'Invalid Operation' })
                     break;
             }
         }

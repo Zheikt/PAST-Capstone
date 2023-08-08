@@ -11,7 +11,7 @@ const ConsumerImport = require('./streams/consumer');
 const ProducerImport = require('./streams/producer');
 const { ResourcePatternTypes } = require('kafkajs');
 
-setTimeout(() => {db(); main();}, 20000); //waits a little for the mongodb instance to spin up
+setTimeout(() => { db(); main(); }, 20000); //waits a little for the mongodb instance to spin up
 
 const consumer = ConsumerImport.consumer({
     groupId: 'mongo-consumer-group'
@@ -67,6 +67,27 @@ async function main() {
                 case 'create-password-verification':
                     CreatePasswordVerifications(messageObj);
                     break;
+                case 'create-group':
+                    CreateGroup(messageObj, msgCode);
+                    break;
+                case 'get-group':
+                    GetGroup(messageObj.groupId, msgCode);
+                    break;
+                case 'delete-group':
+                    DeleteGroup(messageObj.groupId, msgCode);
+                    break;
+                case 'change-group-name':
+                    ChangeGroupName(messageObj, msgCode)
+                    break;
+                case 'join-group':
+                    JoinGroup(messageObj, msgCode);
+                    break;
+                case 'leave-group':
+                    LeaveGroup(messageObj, msgCode);
+                    break;
+                case 'get-user-groups':
+                    GetUserGroups(messageObj.userId, msgCode);
+                    break;
                 default:
                     console.log("No match found. Key: " + message.key);
                     break;
@@ -76,72 +97,66 @@ async function main() {
 }
 
 //#region User Operations
-function GetUser(queryId, msgCode){
-    User.read({id: queryId}).then(res => {
+function GetUser(queryId, msgCode) {
+    User.read({ id: queryId }).then(res => {
         console.log(res);
-        if(res.length == 0)
-        {
-            sendMessage('user', 'mongo-error-response', {type: 'user-error', message: 'No user found with id: ' + queryId})
+        if (res.length == 0) {
+            sendMessage('user', 'mongo-error-response', { type: 'user-error', message: 'No user found with id: ' + queryId })
         }
-        else 
-        {
-            sendMessage('user', 'mongo-response', {operation: 'get-user', response: res, status: 'success', 'msgCode': msgCode});
+        else {
+            sendMessage('user', 'mongo-response', { operation: 'get-user', response: res, status: 'success', 'msgCode': msgCode });
         }
     })
 }
 
-function CreateUser(user, msgCode){
-    User.create(user, function(res, err){
+function CreateUser(user, msgCode) {
+    User.create(user, function (res, err) {
         console.log(err);
         console.log(res);
-        if(err){
+        if (err) {
             console.log(err);
-            sendMessage('user', 'mongo-error-response', {type: 'mongo-error', message: err, 'msgCode': msgCode})
+            sendMessage('user', 'mongo-error-response', { type: 'mongo-error', message: err, 'msgCode': msgCode })
         } else {
-            sendMessage('user', 'mongo-response', {operation: 'create-user', response: res, status: 'success', 'msgCode': msgCode})
+            sendMessage('user', 'mongo-response', { operation: 'create-user', response: res, status: 'success', 'msgCode': msgCode })
         }
     })
 }
 
-function DeleteUser(queryId, msgCode){
-    User.delete({id: queryId}, function(res){
+function DeleteUser(queryId, msgCode) {
+    User.delete({ id: queryId }, function (res) {
         console.log(res);
-        if(res.deletedCount == 0){
-            sendMessage('user', 'mongo-error-response', {type: 'mongo-error', message: 'No user found with id: ' + queryId, 'msgCode': msgCode})
+        if (res.deletedCount == 0) {
+            sendMessage('user', 'mongo-error-response', { type: 'mongo-error', message: 'No user found with id: ' + queryId, 'msgCode': msgCode })
         } else {
-            sendMessage('user', 'mongo-response', {operation: 'delete-user', response: res, status: 'success', 'msgCode': msgCode})
+            sendMessage('user', 'mongo-response', { operation: 'delete-user', response: res, status: 'success', 'msgCode': msgCode })
         }
     })
 }
 
-function VerifyEmail(queryRoute, msgCode){
+function VerifyEmail(queryRoute, msgCode) {
     console.log(queryRoute);
-    EmailVer.read({route: queryRoute}).then(res => {
+    EmailVer.read({ route: queryRoute }).then(res => {
         console.log(res);
-        if(res.length == 0)
-        {
-            sendMessage('user', 'mongo-error-response', {type: 'user-error', message: 'No object with matching route found'});
+        if (res.length == 0) {
+            sendMessage('user', 'mongo-error-response', { type: 'user-error', message: 'No object with matching route found' });
         }
-        else
-        {
+        else {
             let evObj = res[0];
-            if(evObj.validUntil <= Date.now())
-            {
-                sendMessage('user', 'mongo-error-response', {type: 'expiry-error', message: 'Route has expired'});
+            if (evObj.validUntil <= Date.now()) {
+                sendMessage('user', 'mongo-error-response', { type: 'expiry-error', message: 'Route has expired' });
                 //Should the entry be deleted?
-                EmailVer.delete({route: queryRoute}, function(delRes){
+                EmailVer.delete({ route: queryRoute }, function (delRes) {
                     console.log(delRes);
                 })
                 return;
-            } 
-            else
-            {
-                User.update({id: evObj.relatedObject}, {'email.verified': true}, function(innerRes){
-                    if(innerRes.matchedCount == 0){
-                        sendMessage('user', 'mongo-error-response', {type: 'user-error', message: 'No user found with id: ' + res.relatedObject, 'msgCode': msgCode})
+            }
+            else {
+                User.update({ id: evObj.relatedObject }, { 'email.verified': true }, function (innerRes) {
+                    if (innerRes.matchedCount == 0) {
+                        sendMessage('user', 'mongo-error-response', { type: 'user-error', message: 'No user found with id: ' + res.relatedObject, 'msgCode': msgCode })
                     } else {
-                        sendMessage('user', 'mongo-response', {operation: 'verify-email', response: res, status: 'success', 'msgCode': msgCode})
-                        EmailVer.delete({route: queryRoute}, function(delRes){
+                        sendMessage('user', 'mongo-response', { operation: 'verify-email', response: res, status: 'success', 'msgCode': msgCode })
+                        EmailVer.delete({ route: queryRoute }, function (delRes) {
                             console.log(delRes);
                         })
                     }
@@ -151,46 +166,45 @@ function VerifyEmail(queryRoute, msgCode){
     })
 }
 
-function ChangeEmail(data, msgCode){
-    User.update({id: data.userId}, {email: {email: data.newEmail, verified: false}}, function(res){
+function ChangeEmail(data, msgCode) {
+    User.update({ id: data.userId }, { email: { email: data.newEmail, verified: false } }, function (res) {
         console.log(res);
-        if(res.matchedCount == 0){
-            sendMessage('user', 'mongo-error-response', {type: 'mongo-error', message: 'No user found with id: ' + data.userId, 'msgCode': msgCode})
+        if (res.matchedCount == 0) {
+            sendMessage('user', 'mongo-error-response', { type: 'mongo-error', message: 'No user found with id: ' + data.userId, 'msgCode': msgCode })
         } else {
-            sendMessage('user', 'mongo-response', {operation: 'change-email', response: res, status: 'success', 'msgCode': msgCode})
-            EmailVer.deleteMany({relatedObject: data.userId}, function(res){
+            sendMessage('user', 'mongo-response', { operation: 'change-email', response: res, status: 'success', 'msgCode': msgCode })
+            EmailVer.deleteMany({ relatedObject: data.userId }, function (res) {
                 console.log(res);
             })
         }
     })
 }
 
-function ChangeUsername(data, msgCode){
-    User.update({id: data.userId}, {username: data.username}, function(res){
+function ChangeUsername(data, msgCode) {
+    User.update({ id: data.userId }, { username: data.username }, function (res) {
         console.log(res);
-        if(res.matchedCount == 0){
-            sendMessage('user', 'mongo-error-response', {type: 'user-error', message: 'No user found with id: ' + data.userId, 'msgCode': msgCode})
+        if (res.matchedCount == 0) {
+            sendMessage('user', 'mongo-error-response', { type: 'user-error', message: 'No user found with id: ' + data.userId, 'msgCode': msgCode })
         } else {
-            sendMessage('user', 'mongo-response', {operation: 'change-username', response: res, status: 'success', 'msgCode': msgCode})
+            sendMessage('user', 'mongo-response', { operation: 'change-username', response: res, status: 'success', 'msgCode': msgCode })
         }
     })
 }
 
-function ChangePassword(data, msgCode){
-    if(data.route){
-        PassVer.read({route: data.route}).then(function(res){
+function ChangePassword(data, msgCode) {
+    if (data.route) {
+        PassVer.read({ route: data.route }).then(function (res) {
             console.log(res);
-            if(res.length == 0){
-                sendMessage('user', 'mongo-error-response', {type: 'mongo-error', message: 'Invalid route', 'msgCode': msgCode})
+            if (res.length == 0) {
+                sendMessage('user', 'mongo-error-response', { type: 'mongo-error', message: 'Invalid route', 'msgCode': msgCode })
             } else {
                 let pvObj = res[0];
-                if(pvObj.validUntil < Date.now())
-                {
-                    sendMessage('user', 'mongo-error-response', {type: 'expiry-error', message: 'Route has expired', 'msgCode': msgCode})
+                if (pvObj.validUntil < Date.now()) {
+                    sendMessage('user', 'mongo-error-response', { type: 'expiry-error', message: 'Route has expired', 'msgCode': msgCode })
                     return;
                 }
-                ChangePasswordOperation({userId: pvObj.relatedObject, newPassword: data.newPassword}, msgCode);
-                PassVer.delete({route: data.route}, function(res){
+                ChangePasswordOperation({ userId: pvObj.relatedObject, newPassword: data.newPassword }, msgCode);
+                PassVer.delete({ route: data.route }, function (res) {
                     console.log('Delete PassVer after change: ' + res);
                 })
             }
@@ -200,40 +214,127 @@ function ChangePassword(data, msgCode){
     }
 }
 
-function CheckLogin(data, msgCode){
+function CheckLogin(data, msgCode) {
     console.log(data);
-    User.read({id: data.userId, username: data.username, password: data.password}).then(function(res){
+    User.read({ id: data.userId, username: data.username, password: data.password }).then(function (res) {
         console.log(res);
-        if(res.length == 0){
-            sendMessage('user', 'mongo-error-response', {type: 'user-error', message: 'Login Failed', 'msgCode': msgCode})
+        if (res.length == 0) {
+            sendMessage('user', 'mongo-error-response', { type: 'user-error', message: 'Login Failed', 'msgCode': msgCode })
         } else {
-            sendMessage('user', 'mongo-response', {operation: 'login', response: res, status: 'success', 'msgCode': msgCode})
+            sendMessage('user', 'mongo-response', { operation: 'login', response: res, status: 'success', 'msgCode': msgCode })
         }
     })
 }
 
-function ChangePasswordOperation(data, msgCode){
+function ChangePasswordOperation(data, msgCode) {
     console.log(data);
-    User.update({id: data.userId}, {password: data.newPassword}, function(res){
+    User.update({ id: data.userId }, { password: data.newPassword }, function (res) {
         console.log(res);
-        if(res.matchedCount == 0){
-            sendMessage('user', 'mongo-error-response', {type: 'user-error', message: 'No user found with id:' + data.userId, 'msgCode': msgCode})
+        if (res.matchedCount == 0) {
+            sendMessage('user', 'mongo-error-response', { type: 'user-error', message: 'No user found with id:' + data.userId, 'msgCode': msgCode })
         } else {
-            sendMessage('user', 'mongo-response', {operation: 'change-password', response: res, status: 'success', 'msgCode': msgCode})
+            sendMessage('user', 'mongo-response', { operation: 'change-password', response: res, status: 'success', 'msgCode': msgCode })
         }
     })
 }
 //#endregion
 
-function CreateEmailVerifications(data){
-    EmailVer.create(data, function(res){
+//#region Group Operations
+
+function CreateGroup(data, msgCode) {
+    let groupObj = {id: data.id, name: data.name, statBlock: data.statBlock, members: data.members, events: data.events, roles: data.roles, queue: data.queue, channels: data.channels}
+    Group.create(groupObj, function (res, err) {
+        console.log(err);
+        console.log(res);
+        if (err) {
+            console.log(err);
+            sendMessage('group', 'mongo-error-response', { type: 'mongo-error', message: err, 'msgCode': msgCode })
+        } else {
+            sendMessage('group', 'mongo-response', { operation: 'create-group', response: res, status: 'success', 'msgCode': msgCode })
+        }
+    })
+}
+
+function GetGroup(groupId, msgCode) {
+    Group.read({ 'id': groupId }).then(res => {
+        sendMessage('group', 'mongo-response', { operation: 'get-group', response: res, status: 'success', 'msgCode': msgCode });
+    });
+}
+
+function DeleteGroup(groupId, msgCode) {
+    Group.delete({ 'id': groupId }, function(res) {
+        if (res.matchedCount > 0) {
+            sendMessage('group', 'mongo-response', { operation: 'delete-group', response: res, status: 'success', 'msgCode': msgCode });
+        } else {
+            sendMessage('group', 'mongo-error-response', { type: 'user-error', message: 'No Group found with id: ' + groupId, 'msgCode': msgCode })
+        }
+    });
+}
+
+function ChangeGroupName(data, msgCode) {
+    Group.update({id: data.groupId}, {name: data.name}, function(res){
+        if(res.matchedCount > 0){
+            sendMessage('group', 'mongo-response', {operation: 'change-group-name', response: res, status: 'success', 'msgCode': msgCode});
+        } else {
+            sendMessage('group', 'mongo-error-response', { type: 'user-error', message: 'No Group found with id: ' + data.groupId, 'msgCode': msgCode })
+        }
+    })
+}
+
+function JoinGroup(data, msgCode) {
+    Group.read({ 'id': data.groupId }).then(res => {
+        let newMembers = res[0].members;
+        newMembers.push({userId: data.userId, roles: [], nickname: data.username});
+        if(res.length > 0){
+            Group.update({id: data.groupId}, {members: newMembers}, function(resp){
+                if(resp.matchedCount > 0){
+                    sendMessage('group', 'mongo-response', {operation: 'join-group', response: resp, status: 'success', 'msgCode': msgCode});
+                } else {
+                    sendMessage('group', 'mongo-error-response', { type: 'user-error', message: 'No Group found with id: ' + data.groupId, 'msgCode': msgCode })
+                }
+            });
+        } else {
+            sendMessage('group', 'mongo-error-response', { type: 'user-error', message: 'No Group found with id: ' + data.groupId, 'msgCode': msgCode })
+        }
+    });
+}
+
+function LeaveGroup(data, msgCode) {
+    Group.read({ 'id': data.groupId }).then(res => {
+        let newMembers = res[0].members.filter(elem => elem.userId != data.userId);
+        if(res.length > 0){
+            console.log("Finished Read")
+        Group.update({id: data.groupId}, {members: newMembers}, function(resp){
+            if(resp.matchedCount > 0){
+                sendMessage('group', 'mongo-response', {operation: 'leave-group', response: resp, status: 'success', 'msgCode': msgCode});
+            } else {
+                console.log("Failed Update");
+                sendMessage('group', 'mongo-error-response', { type: 'user-error', message: 'No Group found with id: ' + data.groupId, 'msgCode': msgCode })
+            }
+        });
+    } else {
+        sendMessage('group', 'mongo-error-response', { type: 'user-error', message: 'No Group found with id: ' + data.groupId, 'msgCode': msgCode })
+    }
+    });
+}
+
+function GetUserGroups(userId, msgCode) {
+    Group.read({ 'members.userId': userId }).then(res => {
+        sendMessage('group', 'mongo-response', { operation: 'get-user-groups', response: res, status: 'success', 'msgCode': msgCode });
+    });
+}
+
+//#endregion
+
+function CreateEmailVerifications(data) {
+    EmailVer.create(data, function (res) {
         console.log("Created Email Ver: " + res);
     })
 }
 
-function CreatePasswordVerifications(data){
-    PassVer.create(data, function(res){
-        console.log("Created Email Ver: " + res);
+function CreatePasswordVerifications(data) {
+    PassVer.create(data, function (res) {
+        console.log("Created Password Ver: " + res);
     })
 }
 
@@ -244,5 +345,5 @@ async function sendMessage(targetService, operation, data) {
         messages: [
             { key: `${operation}`, value: JSON.stringify(data) }
         ]
-    }).then(res => console.log("SendMessage Promise: " + res));
+    })
 }
