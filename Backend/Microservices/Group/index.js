@@ -172,7 +172,7 @@ function ChangeGroupName(data, msgCode) {
 }
 
 function AddUser(data, msgCode) {
-    let targetKeys = ['userId', 'groupId'];
+    let targetKeys = ['userId', 'groupId', 'username'];
     let acutalKeys = Object.keys(data);
 
     if (VerifyStructure(targetKeys, acutalKeys)) {

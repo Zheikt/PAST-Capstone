@@ -61,6 +61,9 @@ async function main() {
                 case 'login':
                     CheckLogin(messageObj, msgCode);
                     break;
+                case 'check-token':
+                    CheckAuthToken(messageObj, msgCode);
+                    break;
                 case 'create-email-verification':
                     CreateEmailVerifications(messageObj);
                     break;
@@ -237,6 +240,24 @@ function ChangePasswordOperation(data, msgCode) {
         }
     })
 }
+
+function CheckAuthToken(data, msgCode){
+    console.log(data);
+    User.read({'id': data.userId, 'validAuthTokens.token': data.authToken}).then(res => {
+        if(res.length > 0){
+            let targetTokens = res[0].validAuthTokens.filter(elem => elem.token == data.authToken && elem.validUntil >= Date.now());
+            if(targetTokens.length > 0){
+                sendMessage('wss', 'mongo-response', {operation: 'check-token', 'status': 'success', response: res, 'msgCode': msgCode})
+            } else {
+                sendMessage('wss', 'mongo-error-response', {operation: 'check-token', 'status': 'failure', message: 'The token provided was out of date', 'msgCode': msgCode});
+                let validTokens = res[0].validAuthTokens.filter(elem => elem.validUntil > Date.now());
+                User.update({'id': data.userId}, {validAuthTokens: validTokens}, (resp) => console.log('Remove Expired Tokens resp: ' + resp));
+            }
+        } else {
+            sendMessage('wss', 'mongo-error-response', {operation: 'check-token', 'status': 'failure', message: 'No user found with id: ' + data.userId + ' and token: ' + data.token, 'msgCode': msgCode})
+        }
+    })
+}
 //#endregion
 
 //#region Group Operations
@@ -263,7 +284,7 @@ function GetGroup(groupId, msgCode) {
 
 function DeleteGroup(groupId, msgCode) {
     Group.delete({ 'id': groupId }, function(res) {
-        if (res.matchedCount > 0) {
+        if (res.id == groupId) {
             sendMessage('group', 'mongo-response', { operation: 'delete-group', response: res, status: 'success', 'msgCode': msgCode });
         } else {
             sendMessage('group', 'mongo-error-response', { type: 'user-error', message: 'No Group found with id: ' + groupId, 'msgCode': msgCode })
@@ -286,8 +307,9 @@ function JoinGroup(data, msgCode) {
         let newMembers = res[0].members;
         newMembers.push({userId: data.userId, roles: [], nickname: data.username});
         if(res.length > 0){
-            Group.update({id: data.groupId}, {members: newMembers}, function(resp){
-                if(resp.matchedCount > 0){
+            Group.update({'id': data.groupId}, {members: newMembers}, function(resp){
+                console.log(resp)
+                if(resp.id == data.groupId){
                     sendMessage('group', 'mongo-response', {operation: 'join-group', response: resp, status: 'success', 'msgCode': msgCode});
                 } else {
                     sendMessage('group', 'mongo-error-response', { type: 'user-error', message: 'No Group found with id: ' + data.groupId, 'msgCode': msgCode })
@@ -304,8 +326,9 @@ function LeaveGroup(data, msgCode) {
         let newMembers = res[0].members.filter(elem => elem.userId != data.userId);
         if(res.length > 0){
             console.log("Finished Read")
-        Group.update({id: data.groupId}, {members: newMembers}, function(resp){
-            if(resp.matchedCount > 0){
+        Group.update({'id': data.groupId}, {members: newMembers}, function(resp){
+            console.log(resp);
+            if(resp.id == data.groupId){
                 sendMessage('group', 'mongo-response', {operation: 'leave-group', response: resp, status: 'success', 'msgCode': msgCode});
             } else {
                 console.log("Failed Update");

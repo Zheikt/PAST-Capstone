@@ -4,7 +4,7 @@ const kafka_pro = require('./KafkaStreams/producer');
 const consumer = kafka_cons.consumer({ groupId: "past-messagechannel-consumer-group" });
 const producer = kafka_pro.producer();
 
-setTimeout((() => createConsumer()), 15000);
+setTimeout((() => CreateConsumer()), 15000);
 
 async function CreateConsumer(){
     await consumer.connect();
@@ -33,9 +33,17 @@ async function CreateConsumer(){
                     break;
                 case 'rename-channel':
                     break;
+                case 'add-blocked-user':
+                    break;
+                case 'remove-blocked-user':
+                    break;
                 case 'delete-channel':
                     break;
+                case 'get-channel':
+                    break;
                 case 'send-message':
+                    break;
+                case 'get-message':
                     break;
                 case 'edit-message':
                     break;
@@ -63,4 +71,50 @@ async function sendMessage(targetService, operation, data) {
             { key: operation, value: JSON.stringify(data) }
         ]
     });
+}
+
+function CreateChannel(data, msgCode){
+
+}
+
+function RenameChannel(data, msgCode){
+
+}
+
+function DeleteChannel(data, msgCode){
+
+}
+
+function GetChannel(data, msgCode){
+
+}
+
+function CreateMessage(data, msgCode){
+
+}
+
+function GetMessage(data, msgCode){
+
+}
+
+function EditMessage(data, msgCode){
+
+}
+
+function DeleteMessage(data, msgCode){
+
+}
+
+function VerifyStructure(targetKeys, acutalKeys) {
+    let valid = targetKeys.length == acutalKeys.length;
+    targetKeys.forEach(element => {
+        if (valid) {
+            let found = acutalKeys.filter(elem => elem === element);
+
+            if (!found) {
+                valid = false;
+            }
+        }
+    })
+    return valid;
 }

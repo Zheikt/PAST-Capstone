@@ -13,7 +13,24 @@ const app = express();
 
 setTimeout(() => db(), 20000);
 
-app.get('/h/:route', express.json(), function (req, res, next) {
+app.use(express.json());
+app.use(express.urlencoded({extended: true}));
+
+app.get('/h/:route', function (req, res, next) {
+    switch (req.params.route[0]) {
+        case 'e':
+            //serve page?
+            break;
+        case 'p':
+            //serve page?
+            break;
+        case 'g':
+            //serve page?
+            break;
+    }
+})
+
+app.post('/h/:route', function (req, res, next) {
     console.log(req.body);
     switch (req.params.route[0]) {
         case 'e':
@@ -37,6 +54,7 @@ app.get('/h/:route', express.json(), function (req, res, next) {
             RegisterUser(req, res);
             break;
     }
+
 })
 
 app.listen(2001, () => console.log("Lisetning on port " + process.env.NGINX_PORT));

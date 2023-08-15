@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:async';
+import 'dart:convert';
 
 void main() {
   runApp(const MyApp());
@@ -28,7 +31,7 @@ class MyApp extends StatelessWidget {
         //
         // This works for code too, not just values: Most code changes can be
         // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.lightGreen),
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
         useMaterial3: true,
       ),
       home: const MyHomePage(title: 'Flutter Demo Home Page'),
@@ -56,6 +59,18 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   int _counter = 0;
+  late Future<AuthToken> futureToken;
+  final usernameTextController = TextEditingController();
+  final passwordTextController = TextEditingController();
+
+  final _formKey = GlobalKey<FormState>();
+
+  @override
+  void dispose(){
+    usernameTextController.dispose();
+    passwordTextController.dispose();
+    super.dispose();
+  }
 
   void _incrementCounter() {
     setState(() {
@@ -66,6 +81,53 @@ class _MyHomePageState extends State<MyHomePage> {
       // called again, and so nothing would appear to happen.
       _counter++;
     });
+  }
+
+  void _btnLoginPressed() {
+    // Validate returns true if the form is valid, or false otherwise.
+    if (_formKey.currentState!.validate()) {
+      // If the form is valid, display a snackbar. In the real world,
+      // you'd often call a server or save the information in a database.
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Processing Data')),
+      );
+
+      setState(() {
+        futureToken = _tryLogin();
+
+        futureToken.then((value) => {
+              if (value.token.length < 20)
+                {
+                  //login failed
+                }
+              else
+                {
+                  //move to next page and connect to WS using this token
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(value.token)),
+                  )
+                }
+            });
+      });
+    }
+  }
+
+  Future<AuthToken> _tryLogin() async {
+    final bytes = utf8.encode(passwordTextController.text);
+    final base64Pass = base64.encode(bytes);
+    final response = await http.post(Uri.parse('http://localhost:2024/h/l'), body: {'username': usernameTextController.text, "password": base64Pass});
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+
+      return AuthToken.fromJson(data['token']);
+    } else if (response.statusCode == 404) {
+      //login failed
+      return const AuthToken(token: 'fail', validUntil: 0);
+    } else {
+      //server-error
+      throw Exception('Server-Error: ${response.statusCode}');
+    }
   }
 
   @override
@@ -89,30 +151,62 @@ class _MyHomePageState extends State<MyHomePage> {
       body: Center(
         // Center is a layout widget. It takes a single child and positions it
         // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text(
-              'You have touched the button this many times:',
-            ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
+        child: Form(
+          key: _formKey,
+          child: Column(
+            // Column is also a layout widget. It takes a list of children and
+            // arranges them vertically. By default, it sizes itself to fit its
+            // children horizontally, and tries to be as tall as its parent.
+            //
+            // Column has various properties to control how it sizes itself and
+            // how it positions its children. Here we use mainAxisAlignment to
+            // center the children vertically; the main axis here is the vertical
+            // axis because Columns are vertical (the cross axis would be
+            // horizontal).
+            //
+            // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
+            // action in the IDE, or press "p" in the console), to see the
+            // wireframe for each widget.
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              // const Text(
+              //   'You have touched the button this many times:',
+              // ),
+              // Text(
+              //   '$_counter',
+              //   style: Theme.of(context).textTheme.headlineMedium,
+              // ),
+              TextFormField(
+                controller: usernameTextController,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter your username';
+                    }
+                    return null;
+                  },
+                  decoration: const InputDecoration(
+                    border: UnderlineInputBorder(),
+                    labelText: 'Enter your username',
+                  )),
+              TextFormField(
+                controller: passwordTextController,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter your password';
+                  }
+                  return null;
+                },
+                decoration: const InputDecoration(
+                  border: UnderlineInputBorder(),
+                  labelText: 'Enter your password',
+                ),
+              ),
+              ElevatedButton(
+                onPressed: _btnLoginPressed,
+                child: const Text('Submit'),
+              ),
+            ],
+          ),
         ),
       ),
       floatingActionButton: FloatingActionButton(
@@ -121,5 +215,16 @@ class _MyHomePageState extends State<MyHomePage> {
         child: const Icon(Icons.add),
       ), // This trailing comma makes auto-formatting nicer for build methods.
     );
+  }
+}
+
+class AuthToken {
+  final String token;
+  final int validUntil;
+
+  const AuthToken({required this.token, required this.validUntil});
+
+  factory AuthToken.fromJson(Map<String, dynamic> json) {
+    return AuthToken(token: json['token'], validUntil: json['validUntil']);
   }
 }
