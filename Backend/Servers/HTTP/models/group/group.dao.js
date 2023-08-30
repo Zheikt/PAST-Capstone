@@ -5,7 +5,7 @@ schema.statics = {
     create: function(data, callback) 
     {
         const document = new this(data);
-        document.save(callback);
+        document.save().then(callback);
     },
     read: function(query) 
     {
@@ -13,11 +13,15 @@ schema.statics = {
     },
     update: function(query, data, callback) 
     {
-        this.findOneAndUpdate(query, {$set: data}, callback);
+        this.findOneAndUpdate(query, {$set: data}).then(callback);
+    },
+    updateList: function(query, data, callback)
+    {
+        this.findOneAndUpdate(query, {$push: data}).then(callback);
     },
     delete: function(query, callback) 
     {
-        this.findOneAndDelete(query, callback);
+        this.findOneAndDelete(query).then(callback);
     }
 };
 

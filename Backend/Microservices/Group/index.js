@@ -29,6 +29,8 @@ async function createConsumer() {
                 case 'get':
                     GetGroup(messageObj.data, msgCode)
                     break;
+                case 'get-group-by-name':
+                    GetGroupByName(messageObj.data, msgCode);
                 case 'create':
                     CreateGroup(messageObj.data, msgCode);
                     break;
@@ -60,7 +62,7 @@ async function createConsumer() {
                 case 'edit-group-stat-block':
                     break;
                 case 'mongo-response':
-                    sendMessage('wss', 'success', {"msgCode": msgCode, data: messageObj['response']})
+                    sendMessage('wss', 'success', {"msgCode": msgCode, data: {operation: messageObj['operation'], response: messageObj['response']}})
                     break;
                 case 'mongo-error-response':
                     sendMessage('wss', 'failure', {"msgCode": msgCode, reason: messageObj['message']})
@@ -96,6 +98,19 @@ function GetGroup(data, msgCode) {
     }
 }
 
+function GetGroupByName(data, msgCode){
+    let targetKeys = ['name'];
+    let acutalKeys = Object.keys(data);
+
+    let valid = VerifyStructure(targetKeys, acutalKeys);
+
+    if (valid) {
+        sendMessage('mongo', 'get-group-by-name--' + msgCode, data);
+    } else {
+        sendMessage('wss', 'error--' + msgCode, { type: "bad-format", message: "Request improperly formatted", 'msgCode': msgCode })
+    }
+}
+
 function GetUserGroups(data, msgCode) {
     let targetKeys = ['userId'];
     let actualKeys = Object.keys(data);
@@ -117,11 +132,16 @@ function CreateGroup(data, msgCode) {
     let valid = VerifyStructure(targetKeys, acutalKeys);
 
     if (valid) {
+        let roleId = 'r-';
+
+            while (roleId.length < 8) {
+                roleId += idChars[Math.trunc(Math.random() * idChars.length)];
+            }
         let subKeys = Object.keys(data.statBlock);
         if (subKeys.length > 0) {
-            data = Object.assign(data, { 'members': [{userId: data.creatorId, roles: [], nickname: data.creatorUsername}] });
+            data = Object.assign(data, { 'members': [{userId: data.creatorId, roles: ['Admin'], nickname: data.creatorUsername}] });
             data = Object.assign(data, { 'events': [] });
-            data = Object.assign(data, { 'roles': [] });
+            data = Object.assign(data, { 'roles': [{id: roleId, title: 'Admin', permissions: ['rename-channel', 'create-destroy-channel', 'delete-group', 'delete-messages', 'kick-user', 'blacklist-user', 'crud-role', 'rename-group']}] });
             data = Object.assign(data, { 'queue': [] });
             data = Object.assign(data, { 'channels': [] });
 

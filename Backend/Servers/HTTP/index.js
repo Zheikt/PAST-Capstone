@@ -112,7 +112,14 @@ function ChangePassword(req, res) {
 }
 
 function JoinGroup(req, res) {
-
+    Group.updateList({id: req.body.groupId}, {'members': {userId: req.body.userId, nickname: req.body.username, roles: []}}, function(resp, err){
+        console.log(resp)
+        if(resp.id == data.groupId){
+            sendMessage('group', 'mongo-response', {operation: 'join-group', response: resp, status: 'success', 'msgCode': msgCode});
+        } else {
+            sendMessage('group', 'mongo-error-response', { type: 'user-error', message: 'No Group found with id: ' + data.groupId, 'msgCode': msgCode })
+        }
+    });
 }
 
 function Login(req, res) {
@@ -122,7 +129,7 @@ function Login(req, res) {
             res.status(404).json({ 'status': 'fail', 'message': 'Username/Password did not match' });
         } else {
             let tokens = AddAuthToken(resp[0].validAuthTokens);
-            User.update({ id: resp[0].id }, { validAuthTokens: tokens }, (finResp) => res.status(200).json({ 'status': 'success', 'message': 'Login Successful', 'token': tokens[tokens.length - 1] }));
+            User.update({ id: resp[0].id }, { validAuthTokens: tokens }, (finResp) => res.status(200).json({ 'status': 'success', 'message': 'Login Successful', 'token': tokens[tokens.length - 1], 'userId': resp[0].id }));
         }
     })
 }
@@ -137,7 +144,7 @@ function RegisterUser(req, res) {
         id += idChars[Math.trunc(Math.random() * idChars.length)];
     }
 
-    let user = {id: id, username: req.body.username, password: req.body.password, email: { email: req.body.email, verified: false }, stats: [], validAuthTokens: AddAuthToken([]) }
+    let user = {id: id, username: req.body.username, password: req.body.password, email: { email: req.body.email, verified: false }, stats: [], groupIds: [], validAuthTokens: AddAuthToken([]) }
 
     User.create(user, (resp, err) => {
         console.log(resp);

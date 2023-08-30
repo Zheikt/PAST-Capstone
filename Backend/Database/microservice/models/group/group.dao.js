@@ -13,7 +13,19 @@ schema.statics = {
     },
     update: function(query, data, callback) 
     {
-        this.findOneAndUpdate(query, {$set: data}).then(callback);
+        this.findOneUpdate(query, {$set: data}).then(callback);
+    },
+    updateList: function(query, data, callback)
+    {
+        this.findOneAndUpdate(query, {$push: data}).then(callback);
+    },
+    removeFromList: function(query, data, callback)
+    {
+        this.findOneAndUpdate(query, {$pull: data}).then(callback);
+    },
+    removeFromManyLists: function(query, data, callback)
+    {
+        this.updateMany(query, {$pull: data}).then(callback);
     },
     delete: function(query, callback) 
     {

@@ -20,6 +20,17 @@ const msgCodeLength = 7;
 let pendingResponses = [];
 
 let clients = [];
+
+let tm;
+
+function ping(ws) {
+    ws.send('__ping__');
+    tm = setTimeout(() => ws.close(), 5000);
+}
+
+function pong(){
+    clearTimeout(tm);
+}
 //#endregion
 
 setTimeout(() => makeConsumer(), 15000); //wait until Kafka is up
@@ -59,43 +70,42 @@ wss.on('connection', function (ws) {
     while (msgCode.length < msgCodeLength) {
         msgCode += msgCodeChars[Math.trunc((Math.random() * msgCodeChars.length))];
     }
-    clients.push({socket: ws, code: msgCode});
+    clients.push({ socket: ws, code: msgCode });
+    setInterval(() => ping(ws), 30000);
     //set ws.onMessage to only check for the initial messgae (userId, authToken) then set it to broader onMessage once it is verified
-    ws.on('message', function(message){
+    ws.on('message', function (message) {
         let data;
+        let postman;
         try {
             data = JSON.parse(message);
-            data = JSON.parse(data);
+            postman = JSON.parse(data);
         } catch (ex) {
-            console.log(ex);
-            ws.send("Body not formatted as JSON string");
-            return;
-        }
-
-        let keys = Object.keys(data);
-        let targetKeys = ['userId', 'authToken'];
-
-        let valid = true;
-
-        for(let key in targetKeys)
-        {
-            for(let subKey in keys){
-                if(subKey == key){
-                    valid = valid && true;
-                } else {
-                    valid = false;
-                }
+            if (data == undefined) {
+                console.log(ex);
+                ws.send(JSON.stringify({ result: "Body not formatted as JSON string" }));
+                return;
             }
         }
 
-        if(valid){
-            sendMessage('mongo', 'check-token', data, this);
+        if(data.operation == '__pong__'){
+            pong();
+            return;
+        }
+
+        let keys = Object.keys(data.data);
+        let targetKeys = ['userId', 'authToken'];
+
+        let valid = VerifyStructure(targetKeys, keys);
+
+        if (valid) {
+            //let obj = { "userId": data.data.userId, "authToken": data.data.authToken};
+            sendMessage('mongo', 'check-token-', data.data, this);
         } else {
-            ws.send('Cannot parse any messages until this socket has been verified by the server');
+            ws.send(JSON.stringify({ result: 'Cannot parse any messages until this socket has been verified by the server' }));
         }
     });
 
-    ws.on('close', function(code, reason){
+    ws.on('close', function (code, reason) {
         clients = clients.filter(elem => elem.socket != ws);
     })
 });
@@ -138,36 +148,40 @@ async function makeConsumer() {
             let msgCode = messageObj.msgCode;
             let msgObj = pendingResponses.find(elem => elem.msgCode == msgCode);
             let ws = msgObj.sender;
-            if(message.key == 'check-token'){
+            console.log(messageObj);
+            if (messageObj.operation == 'check-token') {
                 let clientObj = clients.find(elem => elem.socket == ws);
-                if(clientObj != undefined && clientObj != null){
+                if (clientObj != undefined && clientObj != null) {
                     let socket = clientObj.socket;
                     let success = messageObj.status == 'success'
-                    socket.send(JSON.stringify(success ? {result: 'Successful Auth'} : messageObj.message.includes('user') ? {result: 'UserId or AuthToken Invalid'} : {result: 'Expired Token'}));
+                    console.log(messageObj);
+                    socket.send(JSON.stringify(success ? { result: 'Successful Auth', data: messageObj.response } : messageObj.message.includes('user') ? { result: 'UserId or AuthToken Invalid' } : { result: 'Expired Token' }));
 
-                    if(success){
+                    if (success) {
                         let newClients = clients.filter(elem => elem == clientObj);
-                        newClients.push({socket: clientObj.socket, userId: messageObj.response[0].id})
+                        newClients.push({ socket: clientObj.socket, userId: messageObj.response[0].id })
                         ws.on('message', function (message) {
                             console.log('Received from client: %s', message);
-                            ws.send('Server received from client: ' + message);
                             let data;
                             try {
                                 data = JSON.parse(message);
-                                data = JSON.parse(data);
                             } catch (ex) {
                                 console.log(ex);
                                 ws.send("Body not formatted as JSON string");
                                 return;
                             }
-                    
+
                             console.log(data);
-                    
+
                             sendMessage(data.service, data.operation, data, this)
                         });
                     }
                 }
             } else {
+                if (messageObj.operation == 'edit-stats' || messageObj.operation == 'change-username') {
+                    sendMessage('user', 'get', { userId: messageObj.data.userId }, ws);
+                    return;
+                }
                 //propogate changes across relevant sockets
                 ws.send(JSON.stringify(message.key.toString() == 'success' ? messageObj.data : message.key.toString().startsWith('error') ? messageObj.message : messageObj.reason));
             }
@@ -176,6 +190,16 @@ async function makeConsumer() {
     })
 }
 
-function verifyLogin(ws) {
+function VerifyStructure(targetKeys, acutalKeys) {
+    let valid = targetKeys.length == acutalKeys.length;
+    targetKeys.forEach(element => {
+        if (valid) {
+            let found = acutalKeys.filter(elem => elem === element);
 
+            if (!found) {
+                valid = false;
+            }
+        }
+    })
+    return valid;
 }

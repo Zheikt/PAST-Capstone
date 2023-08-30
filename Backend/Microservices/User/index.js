@@ -51,8 +51,11 @@ async function createConsumer() {
                 case 'login':
                     CheckLogin(messageObj.data, msgCode);
                     break;
+                case 'edit-stats':
+                    EditStats(messageObj.data, msgCode);
+                    break;
                 case 'mongo-response':
-                    sendMessage('wss', 'success', {"msgCode": msgCode, data: messageObj['response']})
+                    sendMessage('wss', 'success', {"msgCode": msgCode, data: {operation: messageObj['operation'], response: messageObj['response']}})
                     break;
                 case 'mongo-error-response':
                     sendMessage('wss', 'failure', {"msgCode": msgCode, reason: messageObj['message']})
@@ -194,6 +197,19 @@ function CheckLogin(data, msgCode) {
 
     if (valid) {
         sendMessage('mongo', 'login--' + msgCode, data);
+    } else {
+        sendMessage('wss', 'error', { type: "bad-format", message: "Request improperly formatted", 'msgCode': msgCode })
+    }
+}
+
+function EditStats(data, msgCode){
+    let targetKeys = ['userId', 'groupId', 'stats']
+    let actualKeys = Object.keys(data);
+
+    let valid = VerifyStructure(targetKeys, actualKeys);
+
+    if(valid){
+        sendMessage('mongo', 'edit-stats--' + msgCode, data);
     } else {
         sendMessage('wss', 'error', { type: "bad-format", message: "Request improperly formatted", 'msgCode': msgCode })
     }

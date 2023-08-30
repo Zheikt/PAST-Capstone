@@ -11,6 +11,10 @@ schema.statics = {
     {
         return this.find(query);
     },
+    aggregate: function(query)
+    {
+        return this.aggregate(query);
+    },
     update: function(query, data, callback) 
     {
         this.findOneAndUpdate(query, {$set: data}, callback);

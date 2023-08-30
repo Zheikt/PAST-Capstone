@@ -1,4 +1,4 @@
-const mongoose = requie('mongoose');
+const mongoose = require('mongoose');
 
 
 const channelSchema = mongoose.Schema({

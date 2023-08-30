@@ -29,6 +29,20 @@ const emailSchema = mongoose.Schema({
     }
 })
 
+const statSchema = mongoose.Schema({
+    groupId: {
+        type: String,
+        unique: false,
+        required: true
+    },
+    groupName: {
+        type: String,
+        unique: false,
+        required: true
+    },
+    stats: Object
+})
+
 const userSchema = new mongoose.Schema({
     id: {
         type: String,
@@ -51,8 +65,14 @@ const userSchema = new mongoose.Schema({
         required: true
     },
     stats: { //manually tell the db that this has changed
-        type: Array,
+        type: [statSchema],
         unique: false,
+        required: true,
+        default: []
+    },
+    groupIds: {
+        type: [String],
+        unqiue: false,
         required: true,
         default: []
     },
