@@ -9,8 +9,10 @@ part of 'user.dart';
 User _$UserFromJson(Map<String, dynamic> json) => User(
       id: json['id'] as String,
       username: json['username'] as String,
-      email: json['email']['email'] as String,
-      stats: json['stats'] as List<dynamic>,
+      email: json['email'] as String,
+      stats: (json['stats'] as List<dynamic>)
+          .map((e) => e as Map<String, dynamic>)
+          .toList(),
       groupIds:
           (json['groupIds'] as List<dynamic>).map((e) => e as String).toList(),
     );

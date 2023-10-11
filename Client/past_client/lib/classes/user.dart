@@ -7,7 +7,7 @@ class User{
   final String id;
   final String username;
   final String email;
-  final List<dynamic> stats;
+  final List<Map<String, dynamic>> stats;
   final List<String> groupIds;
 
   const User({required this.id, required this.username, required this.email, required this.stats, required this.groupIds});

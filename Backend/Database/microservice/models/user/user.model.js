@@ -43,6 +43,8 @@ const statSchema = mongoose.Schema({
     stats: Object
 })
 
+//make statSchema where the stat is forced to have a boolean value regarding if it must be shown (forcePublic: {type: Boolean, required: true, default: true}, isPublic: {type: Boolean, required: true, default: true})
+
 const userSchema = new mongoose.Schema({
     id: {
         type: String,

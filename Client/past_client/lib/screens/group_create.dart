@@ -15,7 +15,6 @@ class CreateGroupPage extends StatefulWidget {
 
 class _CreateGroupPageState extends State<CreateGroupPage> {
   TextEditingController nameController = TextEditingController();
-
   final _formKey = GlobalKey<FormState>();
 
   @override

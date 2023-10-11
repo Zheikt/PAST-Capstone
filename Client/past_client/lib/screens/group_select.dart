@@ -38,6 +38,7 @@ class _GroupSelectState extends State<GroupSelect> {
   @override
   void initState() {
     super.initState();
+    //Gets user groups
     widget.connection.sendMessage(Request(
         operation: 'get-user-groups',
         service: 'group',
@@ -51,7 +52,7 @@ class _GroupSelectState extends State<GroupSelect> {
         title: const Text('Select a Group!'),
         backgroundColor: Theme.of(context).colorScheme.primaryContainer,
         actions: <Widget>[
-          IconButton(
+          IconButton( //Create new Group
             onPressed: () {
               Navigator.push(
                 context,
@@ -63,7 +64,7 @@ class _GroupSelectState extends State<GroupSelect> {
             },
             icon: const Icon(Icons.add_circle_sharp),
           ),
-          IconButton(
+          IconButton( //Search for Group
             onPressed: () {
               setState(() {
                 isSearch = !isSearch;
@@ -71,7 +72,7 @@ class _GroupSelectState extends State<GroupSelect> {
             },
             icon: const Icon(Icons.search),
           ),
-          IconButton(
+          IconButton( //View User Profile
             onPressed: () {
               Navigator.push(
                 context,
@@ -85,8 +86,8 @@ class _GroupSelectState extends State<GroupSelect> {
             },
             icon: const Icon(Icons.person_sharp),
           ),
-          IconButton(
-            onPressed: () {
+          IconButton( //Returnr to Starting Page
+            onPressed: () { //TODO: Rewrite to use popUntil()
               widget.connection.closeConnection();
               Navigator.pushAndRemoveUntil(
                 context,
@@ -128,7 +129,11 @@ class _GroupSelectState extends State<GroupSelect> {
                   padding:
                       const EdgeInsets.symmetric(vertical: 5, horizontal: 15),
                   child: ElevatedButton(
-                    style: const ButtonStyle(maximumSize: MaterialStatePropertyAll(Size(80, 40,))),
+                    style: const ButtonStyle(
+                        maximumSize: MaterialStatePropertyAll(Size(
+                      80,
+                      40,
+                    ))),
                     onPressed: () {
                       if (_formKey.currentState!.validate()) {
                         widget.connection.sendMessage(
@@ -153,10 +158,12 @@ class _GroupSelectState extends State<GroupSelect> {
                 final data = jsonDecode(snapshot.data.toString());
                 switch (data['operation']) {
                   case 'get-user-groups':
+                    //Set joined groups
                     joinedGroups = List.generate(data['response'].length,
                         (index) => Group.fromJson(data['response'][index]));
                     break;
                   case 'get-group-by-name':
+                    //Set groups found by search
                     searchedGroups = List.generate(data['response'].length,
                         (index) => Group.fromJson(data['response'][index]));
                     break;

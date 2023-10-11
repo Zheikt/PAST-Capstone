@@ -144,7 +144,7 @@ function RegisterUser(req, res) {
         id += idChars[Math.trunc(Math.random() * idChars.length)];
     }
 
-    let user = {id: id, username: req.body.username, password: req.body.password, email: { email: req.body.email, verified: false }, stats: [], groupIds: [], validAuthTokens: AddAuthToken([]) }
+    let user = {id: id, username: req.body.username, password: req.body.password, email: { email: req.body.email, verified: false }, stats: undefined, groupIds: undefined, validAuthTokens: AddAuthToken([]) }
 
     User.create(user, (resp, err) => {
         console.log(resp);

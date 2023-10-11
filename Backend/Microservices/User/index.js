@@ -54,6 +54,8 @@ async function createConsumer() {
                 case 'edit-stats':
                     EditStats(messageObj.data, msgCode);
                     break;
+                case 'get-group-members':
+                    break;
                 case 'mongo-response':
                     sendMessage('wss', 'success', {"msgCode": msgCode, data: {operation: messageObj['operation'], response: messageObj['response']}})
                     break;
