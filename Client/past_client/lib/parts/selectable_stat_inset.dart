@@ -18,10 +18,19 @@ class SelectableStatInsetDisplay extends StatefulWidget {
 class _SelectableStatInsetDisplayState
     extends State<SelectableStatInsetDisplay> {
   late Map<String, dynamic> selectedStats;
+  late List<EditableStatDisplay> statWidgets;
 
   @override
   void initState() {
     selectedStats = widget.user.stats[0]['stats'];
+    statWidgets = List.generate(
+      widget.user.stats.length,
+      (index) => EditableStatDisplay(
+        statBlock: widget.user.stats[index],
+        connection: widget.connection,
+        userId: widget.user.id,
+      ),
+    );
     super.initState();
   }
 
@@ -29,7 +38,9 @@ class _SelectableStatInsetDisplayState
   Widget build(BuildContext context) {
     return Row(
       children: <Widget>[
-        Expanded(
+        Container(
+          decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.inverseSurface),
           child: DropdownMenu<String>(
             dropdownMenuEntries: List.generate(
               widget.user.stats.length,
@@ -40,21 +51,19 @@ class _SelectableStatInsetDisplayState
             initialSelection: widget.user.stats[0]['groupName'],
             label: const Text("Group Stat Block"),
             onSelected: (String? groupName) {
-              setState(() {
-                selectedStats = widget.user.stats
-                    .where((element) => element['groupName'] == groupName)
-                    .first['stats'];
-              });
+              setState(
+                () {
+                  selectedStats = widget.user.stats
+                      .where((element) => element['groupName'] == groupName)
+                      .first['stats'];
+                },
+              );
             },
           ),
         ),
         Expanded(
           flex: 2,
-          child: EditableStatDisplay(
-            statBlock: selectedStats,
-            connection: widget.connection,
-            userId: widget.user.id,
-          ),
+          child: statWidgets[]
         ),
       ],
     );

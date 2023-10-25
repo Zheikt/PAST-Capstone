@@ -9,6 +9,8 @@ import 'package:past_client/parts/editable_stat_display.dart';
 
 import 'dart:developer';
 
+import 'package:past_client/screens/start_page.dart';
+
 class UserProfile extends StatefulWidget {
   final User user;
   final WSConnector connection;
@@ -42,13 +44,19 @@ class _UserProfileState extends State<UserProfile> {
       context: context,
       barrierDismissible: true,
       builder: (context) => AlertDialog(
-        title: const Text("Confirm Account Deletion"),
-        content: const Text(
-            "This action is irreversible. Are you sure you want to delete your account?"),
+        title: Text("Confirm Account Deletion",style: TextStyle(
+            color: Theme.of(context).colorScheme.primary,
+          ),),
+        content: Text(
+          "This action is irreversible. Are you sure you want to delete your account?",
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.primary,
+          ),
+        ),
         actions: [
           TextButton(
             onPressed: deleteUser,
-            child: const Text("Confirm"),
+            child: const Text("Delete", style: TextStyle(color: Colors.red)),
           )
         ],
       ),
@@ -67,7 +75,25 @@ class _UserProfileState extends State<UserProfile> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(),
+      appBar:AppBar(
+        title: const Text('User Profile'),
+        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+        actions: <Widget>[
+          IconButton( //Returnr to Starting Page
+            onPressed: () { //TODO: Rewrite to use popUntil()
+              widget.connection.closeConnection();
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (context) {
+                  return const StartPage();
+                }),
+                (route) => false,
+              );
+            },
+            icon: const Icon(Icons.exit_to_app),
+          ),
+        ],
+      ),
       body: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -76,7 +102,7 @@ class _UserProfileState extends State<UserProfile> {
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 4),
               child: TitledInsetEditTextField(
-                initialValue: widget.user.username,
+                textController: usernameController,
                 title: "Username",
               ),
             ),
@@ -88,7 +114,7 @@ class _UserProfileState extends State<UserProfile> {
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 4),
               child: TitledInsetEditTextField(
-                initialValue: widget.user.email,
+                textController: emailController,
                 title: "Email",
               ),
             ),

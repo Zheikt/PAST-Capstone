@@ -35,7 +35,7 @@ class _LoginPageState extends State<LoginPage> {
 
   void _btnLoginPressed() {
     // Validate returns true if the form is valid, or false otherwise.
-    Navigator.push(context, MaterialPageRoute(builder: (context) => UserProfile(user: User(email: "test@test.com", id: 'u-123456', username: "TestUser", stats: List.filled(1, <String, dynamic>{"groupId": 'g-1n2n3n', "groupName":'Test Group', "stats": <String, dynamic>{"gamesPlayed": 0, "shotMakePercentage": 0.4, "ladderRank": 4}}), groupIds: List.filled(1, 'g-1n2n3n')), connection: WSConnector('ws://10.0.2.2:2024/', const AuthToken(token: '218ehiufhdshiu3eqaljd', validUntil: 9999999999, owner: 'u-123456')))));
+    Navigator.push(context, MaterialPageRoute(builder: (context) => UserProfile(user: const User(email: "test@test.com", id: 'u-123456', username: "TestUser", stats: [<String, dynamic>{"groupId": 'g-1n2n3n', "groupName":'Test Group', "stats": <String, dynamic>{"gamesPlayed": 0, "shotMakePercentage": 0.4, "ladderRank": 4}}, <String, dynamic>{"groupId": 'g-4n5n6n', "groupName":'Test Group 2', "stats": <String, dynamic>{"gamesPlayed": 0, "kill-deathRatio": 1.3, "averageKillsPerGame": 15, "preferredWeapon": "Man-O-War"}}], groupIds: ['g-1n2n3n']), connection: WSConnector('ws://10.0.2.2:2024/', const AuthToken(token: '218ehiufhdshiu3eqaljd', validUntil: 9999999999, owner: 'u-123456')))));
     // if (_formKey.currentState!.validate()) {
     //   setState(() {
     //     futureToken = _tryLogin();

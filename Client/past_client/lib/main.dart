@@ -15,14 +15,24 @@ class MyApp extends StatelessWidget {
       title: 'P.A.S.T.',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
+        //brightness: Brightness.light,
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color.fromARGB(255, 6, 126, 110)),
         scaffoldBackgroundColor: Colors.grey.shade800,
         shadowColor: Colors.grey.shade900,
         textTheme: Typography.whiteRedmond,
         useMaterial3: true,
+        // menuTheme: MenuThemeData(
+        //   style: MenuStyle(
+        //     backgroundColor: MaterialStateProperty.resolveWith((states) {
+        //       if (states.contains(MaterialState.disabled)) {
+        //         return Theme.of(context).colorScheme.onBackground;
+        //       }
+        //       return Theme.of(context).colorScheme.inverseSurface;
+        //     }),
+        //   ),
+        // ),
       ),
-      home: const StartPage()
+      home: const StartPage(),
     );
   }
 }
-
