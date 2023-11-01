@@ -21,16 +21,6 @@ class MyApp extends StatelessWidget {
         shadowColor: Colors.grey.shade900,
         textTheme: Typography.whiteRedmond,
         useMaterial3: true,
-        // menuTheme: MenuThemeData(
-        //   style: MenuStyle(
-        //     backgroundColor: MaterialStateProperty.resolveWith((states) {
-        //       if (states.contains(MaterialState.disabled)) {
-        //         return Theme.of(context).colorScheme.onBackground;
-        //       }
-        //       return Theme.of(context).colorScheme.inverseSurface;
-        //     }),
-        //   ),
-        // ),
       ),
       home: const StartPage(),
     );

@@ -18,15 +18,24 @@ class SelectableStatInsetDisplay extends StatefulWidget {
 class _SelectableStatInsetDisplayState
     extends State<SelectableStatInsetDisplay> {
   late Map<String, dynamic> selectedStats;
+  late int selectionIndex;
   late List<EditableStatDisplay> statWidgets;
 
   @override
   void initState() {
-    selectedStats = widget.user.stats[0]['stats'];
+    int largestIndex = 0;
+    for (int ind = 1; ind < widget.user.stats.length; ind++) {
+      if (widget.user.stats[ind]['stats'].length >
+          widget.user.stats[largestIndex]['stats'].length) {
+        largestIndex = ind;
+      }
+    }
+    selectionIndex = largestIndex;
+    selectedStats = widget.user.stats[selectionIndex]['stats'];
     statWidgets = List.generate(
       widget.user.stats.length,
       (index) => EditableStatDisplay(
-        statBlock: widget.user.stats[index],
+        statBlock: widget.user.stats[index]['stats'],
         connection: widget.connection,
         userId: widget.user.id,
       ),
@@ -38,32 +47,48 @@ class _SelectableStatInsetDisplayState
   Widget build(BuildContext context) {
     return Row(
       children: <Widget>[
-        Container(
-          decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.inverseSurface),
-          child: DropdownMenu<String>(
-            dropdownMenuEntries: List.generate(
-              widget.user.stats.length,
-              (index) => DropdownMenuEntry(
-                  value: widget.user.stats[index]['groupName'],
-                  label: widget.user.stats[index]['groupName']),
+        Expanded(
+          flex: 3,
+          child: Container(
+            // decoration: BoxDecoration(
+            //     color: Theme.of(context).colorScheme.inverseSurface),
+            child: DropdownMenu<String>(
+              inputDecorationTheme: InputDecorationTheme(
+                border: InputBorder.none,
+                fillColor: Theme.of(context).colorScheme.inverseSurface,
+                filled: true,
+              ),
+              width: MediaQuery.of(context).size.width * 0.4,
+              dropdownMenuEntries: List.generate(
+                widget.user.stats.length,
+                (index) => DropdownMenuEntry(
+                    value: widget.user.stats[index]['groupName'],
+                    label: widget.user.stats[index]['groupName']),
+              ),
+              initialSelection: widget.user.stats[selectionIndex]['groupName'],
+              label: const Text(
+                "Group Stat Block",
+                style: TextStyle(
+                  color: Colors.white,
+                ),
+              ),
+              onSelected: (String? groupName) {
+                setState(
+                  () {
+                    selectedStats = widget.user.stats
+                        .where((element) => element['groupName'] == groupName)
+                        .first['stats'];
+                    selectionIndex = widget.user.stats.indexWhere(
+                        (element) => element['groupName'] == groupName);
+                  },
+                );
+              },
             ),
-            initialSelection: widget.user.stats[0]['groupName'],
-            label: const Text("Group Stat Block"),
-            onSelected: (String? groupName) {
-              setState(
-                () {
-                  selectedStats = widget.user.stats
-                      .where((element) => element['groupName'] == groupName)
-                      .first['stats'];
-                },
-              );
-            },
           ),
         ),
         Expanded(
-          flex: 2,
-          child: statWidgets[]
+          flex: 5,
+          child: statWidgets[selectionIndex],
         ),
       ],
     );

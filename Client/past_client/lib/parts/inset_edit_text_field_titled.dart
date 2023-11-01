@@ -40,25 +40,29 @@ class _TitledInsetEditTextFieldState extends State<TitledInsetEditTextField> {
             style: TextStyle(color: Colors.grey.shade300),
           ),
         ),
-        TextField(
-          controller: widget.textController,
-          readOnly: !isEdit,
-          decoration: InputDecoration(
-            suffixIcon: IconButton(
-              onPressed: () => setState(() {
-                isEdit = !isEdit;
-              }),
-              icon: Icon(isEdit ? Icons.edit_off : Icons.edit),
-              color:
-                  Theme.of(context).colorScheme.inversePrimary.withAlpha(180),
+        Expanded(
+          flex: 1,
+          child: TextField(
+            controller: widget.textController,
+            readOnly: !isEdit,
+            decoration: InputDecoration(
+              suffixIcon: IconButton(
+                onPressed: () => setState(() {
+                  isEdit = !isEdit;
+                }),
+                icon: Icon(isEdit ? Icons.edit_off : Icons.edit),
+                color:
+                    Theme.of(context).colorScheme.inversePrimary.withAlpha(180),
+              ),
+              filled: true,
+              fillColor: Theme.of(context).colorScheme.inverseSurface,
+              border: const OutlineInputBorder(
+                borderRadius: BorderRadius.all(Radius.circular(6)),
+              ),
             ),
-            filled: true,
-            fillColor: Theme.of(context).colorScheme.inverseSurface,
-            border: const OutlineInputBorder(
-              borderRadius: BorderRadius.all(Radius.circular(6)),
-            ),
+            style:
+                TextStyle(color: Theme.of(context).colorScheme.inversePrimary),
           ),
-          style: TextStyle(color: Theme.of(context).colorScheme.inversePrimary),
         )
       ],
     );
