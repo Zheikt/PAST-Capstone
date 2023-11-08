@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 class TitledInsetEditTextField extends StatefulWidget {
   final TextEditingController textController;
   final String title;
+  final bool isToggleable;
+  final double titleSize;
 
   const TitledInsetEditTextField(
-      {super.key, required this.textController, required this.title});
+      {super.key, required this.textController, required this.title, this.isToggleable = true, this.titleSize = 14});
 
   @override
   State<TitledInsetEditTextField> createState() =>
@@ -31,29 +33,31 @@ class _TitledInsetEditTextFieldState extends State<TitledInsetEditTextField> {
   @override
   Widget build(BuildContext context) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
           padding: const EdgeInsets.only(left: 7, bottom: 3),
           child: Text(
             widget.title,
-            style: TextStyle(color: Colors.grey.shade300),
+            style: TextStyle(color: Colors.grey.shade300, fontSize: widget.titleSize),
           ),
         ),
-        Expanded(
+        Flexible(
           flex: 1,
+          fit: FlexFit.loose,
           child: TextField(
             controller: widget.textController,
-            readOnly: !isEdit,
+            readOnly: !isEdit && widget.isToggleable,
             decoration: InputDecoration(
-              suffixIcon: IconButton(
+              suffixIcon: widget.isToggleable ? IconButton(
                 onPressed: () => setState(() {
                   isEdit = !isEdit;
                 }),
                 icon: Icon(isEdit ? Icons.edit_off : Icons.edit),
                 color:
                     Theme.of(context).colorScheme.inversePrimary.withAlpha(180),
-              ),
+              ) : null,
               filled: true,
               fillColor: Theme.of(context).colorScheme.inverseSurface,
               border: const OutlineInputBorder(

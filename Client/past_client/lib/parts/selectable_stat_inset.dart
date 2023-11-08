@@ -47,18 +47,18 @@ class _SelectableStatInsetDisplayState
   Widget build(BuildContext context) {
     return Row(
       children: <Widget>[
-        Expanded(
+        Flexible(
           flex: 3,
-          child: Container(
+          fit: FlexFit.loose,
+          child: LayoutBuilder(
             // decoration: BoxDecoration(
             //     color: Theme.of(context).colorScheme.inverseSurface),
-            child: DropdownMenu<String>(
-              inputDecorationTheme: InputDecorationTheme(
-                border: InputBorder.none,
-                fillColor: Theme.of(context).colorScheme.inverseSurface,
-                filled: true,
-              ),
-              width: MediaQuery.of(context).size.width * 0.4,
+            builder: (context, constraints) =>  DropdownMenu<String>(
+              // inputDecorationTheme: InputDecorationTheme(
+              //   fillColor: Theme.of(context).colorScheme.inverseSurface,
+              //   filled: true,
+              // ),
+              width: constraints.maxWidth,
               dropdownMenuEntries: List.generate(
                 widget.user.stats.length,
                 (index) => DropdownMenuEntry(

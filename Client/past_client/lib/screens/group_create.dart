@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_layout_grid/flutter_layout_grid.dart';
 import 'package:past_client/classes/controller_collection_item.dart';
@@ -26,6 +28,8 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
   TextEditingController nameController = TextEditingController();
   final List<ControllerCollectionItem> kvControllers =
       List.generate(10, ((index) => ControllerCollectionItem(2)));
+  final List<bool> isNumList = List.generate(10, (index) => (index % 2 == 0));
+  final ScrollController _scrollController = ScrollController();
 
   void addStatPressHandler() {
     if (numOfStats < maxNumberOfStats) {
@@ -33,7 +37,7 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
         () => {
           numOfStats++,
           enableRemoveStatBtn = true,
-          enableAddStatBtn = numOfStats < maxNumberOfStats
+          enableAddStatBtn = numOfStats < maxNumberOfStats,
         },
       );
     } else {
@@ -61,13 +65,16 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
 
   @override
   Widget build(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback((_) =>
+        _scrollController.jumpTo(_scrollController.position.maxScrollExtent));
+
     return Scaffold(
       appBar: AppBar(
         title: const Text("Create Group"),
         backgroundColor: Theme.of(context).colorScheme.primaryContainer,
         actions: <Widget>[
           IconButton(
-            //Returnr to Starting Page
+            //Go to SelectGroup
             onPressed: () {
               //TODO: Rewrite to use popUntil()
               widget.connection.closeConnection();
@@ -100,7 +107,7 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
             icon: const Icon(Icons.person_sharp),
           ),
           IconButton(
-            //Returnr to Starting Page
+            //Return to Starting Page
             onPressed: () {
               //TODO: Rewrite to use popUntil()
               widget.connection.closeConnection();
@@ -120,86 +127,160 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
         child: LayoutGrid(
           columnSizes: [1.fr, 98.fr, 1.fr],
           rowSizes: [
-            35.fr,
-            47.fr,
-            47.fr,
-            47.fr,
-            47.fr,
-            47.fr,
-            47.fr,
-            47.fr,
-            47.fr,
-            47.fr,
-            47.fr,
-            47.fr,
-            47.fr,
-            47.fr,
             7.fr,
+            15.fr,
+            15.fr,
+            15.fr,
+            15.fr,
+            15.fr,
+            7.fr,
+            8.fr,
+            3.fr,
           ],
           children: <Widget>[
             TitledInsetEditTextField(
               //Group name box
               title: "Group Name",
               textController: nameController,
+              isToggleable: false,
+              titleSize: 18,
             ).withGridPlacement(
               columnStart: 1,
               columnSpan: 1,
               rowStart: 1,
               rowSpan: 1,
             ),
-            for (int value = 0; value < numOfStats; value++)
-              Row(
-                children: [
-                  Expanded(
-                    flex: 2,
-                    child: TitledInsetEditTextField(
-                      textController: kvControllers[value].getController(0),
-                      title: "Key",
-                    ),
+            Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(left: 7, bottom: 3),
+                  child: Text(
+                    "Base Stat Block",
+                    style: TextStyle(color: Colors.grey.shade300, fontSize: 18),
                   ),
-                  const Expanded(
-                    flex: 1,
-                    child: DropdownMenu<Type>(
-                      dropdownMenuEntries: [
-                        DropdownMenuEntry(value: int, label: "Integer"),
-                        DropdownMenuEntry(value: String, label: "Text"),
-                        DropdownMenuEntry(value: double, label: "Decimal"),
-                        DropdownMenuEntry(value: bool, label: "Boolean"),
-                      ],
-                    ),
+                ),
+                Flexible(
+                  child: ListView.builder(
+                    controller: _scrollController,
+                    itemCount: numOfStats,
+                    itemBuilder: ((context, index) => Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Flexible(
+                              flex: 2,
+                              fit: FlexFit.loose,
+                              child: TitledInsetEditTextField(
+                                textController:
+                                    kvControllers[index].getController(0),
+                                title: "Stat ${index + 1} Name",
+                                isToggleable: false,
+                              ),
+                            ),
+                            Flexible(
+                              flex: 2,
+                              fit: FlexFit.loose,
+                              child: TitledInsetEditTextField(
+                                textController:
+                                    kvControllers[index].getController(1),
+                                title: "Starting Value",
+                                isToggleable: false,
+                              ),
+                            ),
+                            Flexible(
+                              flex: 1,
+                              fit: FlexFit.loose,
+                              child: Column(
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.only(
+                                        left: 7, bottom: 3),
+                                    child: Text(
+                                      "Is Numeric",
+                                      style: TextStyle(
+                                          color: Colors.grey.shade300),
+                                    ),
+                                  ),
+                                  Checkbox(
+                                    value: isNumList[index],
+                                    onChanged: ((value) => setState(
+                                          () {
+                                            isNumList[index] =
+                                                !isNumList[index];
+                                          },
+                                        )),
+                                    semanticLabel: "Is Numeric",
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        )),
                   ),
-                  Expanded(
-                    flex: 2,
-                    child: TitledInsetEditTextField(
-                      textController: kvControllers[value].getController(1),
-                      title: "Value",
-                    ),
-                  ),
-                ],
-              ).withGridPlacement(
-                columnStart: 1,
-                columnSpan: 1,
-                rowStart: value + 2,
-                rowSpan: 1,
-              ),
-            ElevatedButton(
-              onPressed: enableAddStatBtn ? addStatPressHandler : null,
-              child: const Text("Add Stat"),
+                )
+              ],
             ).withGridPlacement(
               columnStart: 1,
               columnSpan: 1,
-              rowStart: numOfStats + 2,
-              rowSpan: 1,
+              rowStart: 2,
+              rowSpan: numOfStats > 4 ? 4 : numOfStats,
             ),
-            ElevatedButton(
-              onPressed: enableRemoveStatBtn ? removeStatPressHandler : null,
-              child: const Text("Remove Stat"),
+            Row(
+              children: [
+                Expanded(
+                  flex: 7,
+                  child: ElevatedButton(
+                    onPressed: enableAddStatBtn ? addStatPressHandler : null,
+                    child: const Text("Add Stat"),
+                  ),
+                ),
+                const Expanded(
+                  flex: 6,
+                  child: Padding(
+                    padding: EdgeInsets.all(1),
+                  ),
+                ),
+                Expanded(
+                  flex: 7,
+                  child: ElevatedButton(
+                    onPressed:
+                        enableRemoveStatBtn ? removeStatPressHandler : null,
+                    child: const Text("Remove Stat"),
+                  ),
+                ),
+              ],
             ).withGridPlacement(
               columnStart: 1,
               columnSpan: 1,
-              rowStart: numOfStats + 3,
+              rowStart: 2 + (numOfStats > 4 ? 4 : numOfStats),
               rowSpan: 1,
             ),
+            Row(
+              children: [
+                const Expanded(
+                  flex: 7,
+                  child: Padding(
+                    padding: EdgeInsets.all(1),
+                  ),
+                ),
+                Expanded(
+                    flex: 6,
+                    child: ElevatedButton(
+                      onPressed: () => log("Submit Pressed"),
+                      child: const Text("Submit"),
+                    )),
+                const Expanded(
+                  flex: 7,
+                  child: Padding(
+                    padding: EdgeInsets.all(1),
+                  ),
+                ),
+              ],
+            ).withGridPlacement(
+              columnStart: 1,
+              columnSpan: 1,
+              rowStart: 7,
+              rowSpan: 1,
+            )
           ],
         ),
       ),

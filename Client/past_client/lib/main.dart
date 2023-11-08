@@ -17,7 +17,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         //brightness: Brightness.light,
         colorScheme: ColorScheme.fromSeed(seedColor: const Color.fromARGB(255, 6, 126, 110)),
-        scaffoldBackgroundColor: Colors.grey.shade800,
+        scaffoldBackgroundColor: Colors.grey.shade700,
         shadowColor: Colors.grey.shade900,
         textTheme: Typography.whiteRedmond,
         useMaterial3: true,
