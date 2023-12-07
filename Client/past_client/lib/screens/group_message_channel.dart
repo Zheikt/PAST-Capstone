@@ -184,17 +184,19 @@ class _GroupMessageChannelState extends State<GroupMessageChannel> {
                         },
                       ),
                       SliverAppBar(
-                        pinned: false,
-                        stretch: true,
+                        //stretch: true,
                         automaticallyImplyLeading: false,
                         forceMaterialTransparency: true,
-                        title: Text(
-                          "The start of great plans and activities in ${widget.group.name}'s ${widget.channel.name} channel!",
-                          maxLines: 3,
-                          softWrap: true,
-                          style: TextStyle(
-                              color:
-                                  Theme.of(context).colorScheme.inversePrimary),
+                        title: Flexible(
+                          child: Text(
+                            "The start of great plans and activities in ${widget.group.name}'s ${widget.channel.name} channel!",
+                            maxLines: 3,
+                            softWrap: true,
+                            style: TextStyle(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .inversePrimary, fontSize: 20),
+                          ),
                         ),
                       ),
                     ],

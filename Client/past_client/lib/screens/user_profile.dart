@@ -150,7 +150,7 @@ class _UserProfileState extends State<UserProfile> {
                     color: Color.fromARGB(148, 144, 164, 174)),
                 widget.user.stats.isNotEmpty
                     ? SelectableStatInsetDisplay(
-                        user: widget.user, connection: widget.connection, groupIdToName: {},)
+                        user: widget.user, connection: widget.connection, groupIdToName: {widget.user.groupIds[0]: 'Pool Club'},)
                     : const Text('No Statistics'),
                 // widget.user.groupIds.isNotEmpty
                 //     ? ListView.separated(

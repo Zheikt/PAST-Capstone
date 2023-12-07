@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:past_client/classes/channel.dart';
@@ -134,6 +135,7 @@ class _GroupChannelSelectState extends State<GroupChannelSelect> {
                     snapshot.data is! List &&
                     snapshot.data != '__ping__') {
                   final data = jsonDecode(snapshot.data.toString());
+                  log(data.toString());
                   switch (data['operation']) {
                     case 'get-group-channels':
                       channels = List.generate(data['response'].length,
@@ -207,7 +209,7 @@ class _GroupChannelSelectState extends State<GroupChannelSelect> {
                   ? () => showDialog(
                         context: context,
                         builder: (context) => CreateChannelDialog(
-                            connection: widget.connection, group: widget.group),
+                            connection: widget.connection, group: widget.group, controller: widget.controller,),
                       )
                   : null,
               child: const Text('Add Channel'),
