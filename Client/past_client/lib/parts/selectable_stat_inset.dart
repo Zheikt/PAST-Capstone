@@ -5,10 +5,14 @@ import 'package:past_client/parts/editable_stat_display.dart';
 
 class SelectableStatInsetDisplay extends StatefulWidget {
   final User user;
+  final Map<String, String> groupIdToName;
   final WSConnector connection;
 
   const SelectableStatInsetDisplay(
-      {super.key, required this.user, required this.connection});
+      {super.key,
+      required this.user,
+      required this.connection,
+      required this.groupIdToName});
 
   @override
   State<SelectableStatInsetDisplay> createState() =>
@@ -53,7 +57,7 @@ class _SelectableStatInsetDisplayState
           child: LayoutBuilder(
             // decoration: BoxDecoration(
             //     color: Theme.of(context).colorScheme.inverseSurface),
-            builder: (context, constraints) =>  DropdownMenu<String>(
+            builder: (context, constraints) => DropdownMenu<String>(
               // inputDecorationTheme: InputDecorationTheme(
               //   fillColor: Theme.of(context).colorScheme.inverseSurface,
               //   filled: true,
@@ -62,8 +66,11 @@ class _SelectableStatInsetDisplayState
               dropdownMenuEntries: List.generate(
                 widget.user.stats.length,
                 (index) => DropdownMenuEntry(
-                    value: widget.user.stats[index]['groupName'],
-                    label: widget.user.stats[index]['groupName']),
+                  value: widget
+                      .groupIdToName[widget.user.stats[index]['groupId']]!,
+                  label: widget
+                      .groupIdToName[widget.user.stats[index]['groupId']]!,
+                ),
               ),
               initialSelection: widget.user.stats[selectionIndex]['groupName'],
               label: const Text(

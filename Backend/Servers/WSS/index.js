@@ -31,6 +31,46 @@ function ping(ws) {
 function pong(){
     clearTimeout(tm);
 }
+
+function verifySocketHandler(message){
+    console.log('Checking Auth');
+    let data;
+    let postman;
+    try {
+        data = JSON.parse(message);
+        postman = JSON.parse(data);
+    } catch (ex) {
+        if (data == undefined) {
+            console.log(ex);
+            ws.send(JSON.stringify({ result: "Body not formatted as JSON string" }));
+            return;
+        }
+    }
+
+    if(data.operation == '__pong__'){
+        console.log('ping-pong');
+        pong();
+        return;
+    }
+
+    if(data.operation.includes('prop')){
+        console.log('Propped in orig handler');
+        return;
+    }
+
+    let keys = Object.keys(data.data);
+    let targetKeys = ['userId', 'authToken'];
+
+    let valid = VerifyStructure(targetKeys, keys);
+
+    if (valid) {
+        //let obj = { "userId": data.data.userId, "authToken": data.data.authToken};
+        sendMessage('mongo', 'check-token-', data.data, this);
+        console.log('Sending Auth');
+    } else {
+        this.send(JSON.stringify({ result: 'Cannot parse any messages until this socket has been verified by the server' }));
+    }
+}
 //#endregion
 
 setTimeout(() => makeConsumer(), 15000); //wait until Kafka is up
@@ -64,6 +104,12 @@ setTimeout(() => makeConsumer(), 15000); //wait until Kafka is up
 - Delete Message Channel (Message Channel, Group, Messages)
 */
 
+//Requests that should be HTTP
+/*
+- Create Group
+- Join Group
+*/
+
 wss.on('connection', function (ws) {
     //Save socket and msgCode
     let msgCode = '';
@@ -73,37 +119,7 @@ wss.on('connection', function (ws) {
     clients.push({ socket: ws, code: msgCode });
     setInterval(() => ping(ws), 30000);
     //set ws.onMessage to only check for the initial messgae (userId, authToken) then set it to broader onMessage once it is verified
-    ws.on('message', function (message) {
-        let data;
-        let postman;
-        try {
-            data = JSON.parse(message);
-            postman = JSON.parse(data);
-        } catch (ex) {
-            if (data == undefined) {
-                console.log(ex);
-                ws.send(JSON.stringify({ result: "Body not formatted as JSON string" }));
-                return;
-            }
-        }
-
-        if(data.operation == '__pong__'){
-            pong();
-            return;
-        }
-
-        let keys = Object.keys(data.data);
-        let targetKeys = ['userId', 'authToken'];
-
-        let valid = VerifyStructure(targetKeys, keys);
-
-        if (valid) {
-            //let obj = { "userId": data.data.userId, "authToken": data.data.authToken};
-            sendMessage('mongo', 'check-token-', data.data, this);
-        } else {
-            ws.send(JSON.stringify({ result: 'Cannot parse any messages until this socket has been verified by the server' }));
-        }
-    });
+    ws.on('message', verifySocketHandler);
 
     ws.on('close', function (code, reason) {
         clients = clients.filter(elem => elem.socket != ws);
@@ -125,7 +141,13 @@ async function sendMessage(targetService, operation, data, senderSocket) {
 
     body = Object.assign(body, { "msgCode": msgCode });
 
-    pendingResponses.push({ 'msgCode': msgCode, 'sender': senderSocket })
+    let pendingResponseObj = { 'msgCode': msgCode, 'sender': senderSocket };
+
+    // if(operation == 'send-message'){
+    //     pendingResponseObj['channelId'] = data.recipient;
+    // }
+
+    pendingResponses.push(pendingResponseObj);
 
     console.log(body);
 
@@ -144,11 +166,37 @@ async function makeConsumer() {
     await consumer.run({
         eachMessage: async ({ topic, partition, message, heartbeat, pause }) => {
             //message.key and message.value
+            console.log(message.key);
+            console.log(message.key.toString());
+
             let messageObj = JSON.parse(message.value);
             let msgCode = messageObj.msgCode;
+            msgCode = msgCode == undefined ? message.key.toString().split('--')[1] : msgCode;
+            console.log(messageObj);
+            console.log(msgCode);
+
+            if(message.key.toString().includes('prop')){
+                let response = JSON.stringify(Object.assign(messageObj.data, {'operation': messageObj.operation}));
+                console.log(response);
+                for(let index = 0; index < clients.length; index++){
+                    console.log(clients.length);
+                    console.log(clients[index]);
+                    for(let innerInd = 0; innerInd < messageObj.data.userIds.length; innerInd++){
+                        console.log(messageObj.data.userIds.length);
+                        console.log(messageObj.data.userIds[innerInd]);
+                        if(clients[index].userId == messageObj.data.userIds[innerInd]){
+                            console.log('sending to user: ' + clients[index].userId);
+                            clients[index].socket.send(response);
+                        }
+                    }
+                }
+                pendingResponses = pendingResponses.filter(elem => elem.msgCode !== msgCode);
+                return;
+            }
+
             let msgObj = pendingResponses.find(elem => elem.msgCode == msgCode);
             let ws = msgObj.sender;
-            console.log(messageObj);
+            
             if (messageObj.operation == 'check-token') {
                 let clientObj = clients.find(elem => elem.socket == ws);
                 if (clientObj != undefined && clientObj != null) {
@@ -158,8 +206,11 @@ async function makeConsumer() {
                     socket.send(JSON.stringify(success ? { result: 'Successful Auth', data: messageObj.response } : messageObj.message.includes('user') ? { result: 'UserId or AuthToken Invalid' } : { result: 'Expired Token' }));
 
                     if (success) {
-                        let newClients = clients.filter(elem => elem == clientObj);
-                        newClients.push({ socket: clientObj.socket, userId: messageObj.response[0].id })
+                        // let newClients = clients.filter(elem => elem == clientObj);
+                        // newClients.push({ socket: clientObj.socket, userId: messageObj.response[0].id });
+                        let newClient = { socket: clientObj.socket, userId: messageObj.response[0].id };
+                        let clientIndex = clients.findIndex((value) => value == clientObj);
+                        clients[clientIndex] = newClient;
                         ws.on('message', function (message) {
                             console.log('Received from client: %s', message);
                             let data;
@@ -175,6 +226,8 @@ async function makeConsumer() {
 
                             sendMessage(data.service, data.operation, data, this)
                         });
+
+                        ws.removeEventListener('message', verifySocketHandler);
                     }
                 }
             } else {
@@ -183,7 +236,9 @@ async function makeConsumer() {
                     return;
                 }
                 //propogate changes across relevant sockets
-                ws.send(JSON.stringify(message.key.toString() == 'success' ? messageObj.data : message.key.toString().startsWith('error') ? messageObj.message : messageObj.reason));
+                let response = JSON.stringify(message.key.toString() == 'success' ? messageObj.data : message.key.toString().startsWith('error') ? messageObj.message : messageObj.reason)
+                console.log(response);
+                ws.send(response);
             }
             pendingResponses = pendingResponses.filter(elem => elem.msgCode !== msgCode);
         }

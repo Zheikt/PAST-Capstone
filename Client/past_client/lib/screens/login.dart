@@ -9,6 +9,7 @@ import 'dart:developer';
 import 'package:past_client/parts/hidden_toggleable_text_form_field.dart';
 import 'package:past_client/classes/auth_token.dart';
 import 'package:past_client/screens/group_create.dart';
+import 'package:past_client/screens/group_select.dart';
 import 'package:past_client/screens/past_main_page.dart';
 import 'package:past_client/screens/user_profile.dart';
 
@@ -36,30 +37,32 @@ class _LoginPageState extends State<LoginPage> {
 
   void _btnLoginPressed() {
     // Validate returns true if the form is valid, or false otherwise.
-    //Navigator.push(context, MaterialPageRoute(builder: (context) => UserProfile(user: const User(email: "test@test.com", id: 'u-123456', username: "TestUser", stats: [<String, dynamic>{"groupId": 'g-1n2n3n', "groupName":'Test Group', "stats": <String, dynamic>{"gamesPlayed": 0, "shotMakePercentage": 0.4, "ladderRank": 4}}, <String, dynamic>{"groupId": 'g-4n5n6n', "groupName":'Test Group 2', "stats": <String, dynamic>{"gamesPlayed": 0, "kill-deathRatio": 1.3, "averageKillsPerGame": 15, "preferredWeapon": "Man-O-War"}}], groupIds: ['g-1n2n3n']), connection: WSConnector('ws://10.0.2.2:2024/', const AuthToken(token: '218ehiufhdshiu3eqaljd', validUntil: 9999999999, owner: 'u-123456')))));
-    Navigator.push(context, MaterialPageRoute(builder: (context) => CreateGroupPage(user: const User(email: "test@test.com", id: 'u-123456', username: "TestUser", stats: [<String, dynamic>{"groupId": 'g-1n2n3n', "groupName":'Test Group', "stats": <String, dynamic>{"gamesPlayed": 0, "shotMakePercentage": 0.4, "ladderRank": 4}}, <String, dynamic>{"groupId": 'g-4n5n6n', "groupName":'Test Group 2', "stats": <String, dynamic>{"gamesPlayed": 0, "kill-deathRatio": 1.3, "averageKillsPerGame": 15, "preferredWeapon": "Man-O-War"}}], groupIds: ['g-1n2n3n']), connection: WSConnector('ws://10.0.2.2:2024/', const AuthToken(token: '218ehiufhdshiu3eqaljd', validUntil: 9999999999, owner: 'u-123456')))));
-    // if (_formKey.currentState!.validate()) {
-    //   setState(() {
-    //     futureToken = _tryLogin();
+    //Navigator.push(context, MaterialPageRoute(builder: (context) => UserProfile(user: const User(email: "test@test.com", id: 'u-123456', username: "TestUser", stats: [<String, dynamic>{"groupId": 'g-1n2n3n', "groupName":'The Rack', "stats": <String, dynamic>{"gamesPlayed": 0, "shotMakePercentage": 0.4, "ladderRank": 4}}, <String, dynamic>{"groupId": 'g-4n5n6n', "groupName":'Test Group 2', "stats": <String, dynamic>{"gamesPlayed": 0, "kill-deathRatio": 1.3, "averageKillsPerGame": 15, "preferredWeapon": "Man-O-War"}}], groupIds: ['g-1n2n3n', 'g-4n5n6n']), connection: WSConnector('ws://10.0.2.2:2024/', const AuthToken(token: '218ehiufhdshiu3eqaljd', validUntil: 9999999999, owner: 'u-123456')))));
+    //Navigator.push(context, MaterialPageRoute(builder: (context) => CreateGroupPage(user: const User(email: "test@test.com", id: 'u-123456', username: "TestUser", stats: [<String, dynamic>{"groupId": 'g-1n2n3n', "groupName":'The Rack', "stats": <String, dynamic>{"gamesPlayed": 0, "shotMakePercentage": 0.4, "ladderRank": 4}}, <String, dynamic>{"groupId": 'g-4n5n6n', "groupName":'Test Group 2', "stats": <String, dynamic>{"gamesPlayed": 0, "kill-deathRatio": 1.3, "averageKillsPerGame": 15, "preferredWeapon": "Man-O-War"}}], groupIds: ['g-1n2n3n', 'g-4n5n6n']), connection: WSConnector('ws://10.0.2.2:2024/', const AuthToken(token: '218ehiufhdshiu3eqaljd', validUntil: 9999999999, owner: 'u-123456')))));
+    //Navigator.push(context, MaterialPageRoute(builder: (context) => GroupSelect(user: const User(email: "test@test.com", id: 'u-123456', username: "TestUser", stats: [<String, dynamic>{"groupId": 'g-1n2n3n', "groupName":'The Rack', "stats": <String, dynamic>{"gamesPlayed": 0, "shotMakePercentage": 0.4, "ladderRank": 4}}, <String, dynamic>{"groupId": 'g-4n5n6n', "groupName":'Test Group 2', "stats": <String, dynamic>{"gamesPlayed": 0, "kill-deathRatio": 1.3, "averageKillsPerGame": 15, "preferredWeapon": "Man-O-War"}}], groupIds: ['g-1n2n3n', 'g-4n5n6n']), connection: WSConnector('ws://10.0.2.2:2024/', const AuthToken(token: '218ehiufhdshiu3eqaljd', validUntil: 9999999999, owner: 'u-123456')), controller: StreamController(),)));
+    if (_formKey.currentState!.validate()) {
+      setState(() {
+        futureToken = _tryLogin();
 
-    //     futureToken.then((value) => {
-    //           log('data: ${value.token}'),
-    //           if (value.token.length < 20)
-    //             {
-    //               //login failed
-    //             }
-    //           else
-    //             {
-    //               //move to next page and connect to WS using this token
-    //               Navigator.push(
-    //                   context,
-    //                   MaterialPageRoute(
-    //                     builder: (context) => PastMainPage(token: value),
-    //                   ))
-    //             }
-    //         });
-    //   });
-    // }
+        futureToken.then((value) => {
+              log('data: ${value.token}'),
+              if (value.token.length < 20)
+                {
+                  //login failed
+                  //Username/Password doesn't match
+                }
+              else
+                {
+                  //move to next page and connect to WS using this token
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => PastMainPage(token: value),
+                      ))
+                }
+            });
+      });
+    }
   }
 
   Future<AuthToken> _tryLogin() async {

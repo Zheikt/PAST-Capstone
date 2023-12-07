@@ -8,7 +8,7 @@ part 'member.g.dart';
 class Member{
   final String userId;
   String nickname;
-  List<Role> roles;
+  List<String> roles;
 
   Member({required this.userId, required this.nickname, required this.roles});
 

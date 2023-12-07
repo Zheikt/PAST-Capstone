@@ -8,7 +8,7 @@ part 'group.g.dart';
 class Group{
   final String id;
   String name;
-  List<Map<String,String>> channels; //[{'c-xxxxxx': 'general'}]
+  List<String> channels; //['c-xxxxxx']
   List<Member> members;
   Set<Role> availableRoles;
   //Queue queue;

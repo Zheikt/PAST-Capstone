@@ -56,6 +56,9 @@ async function createConsumer() {
                     break;
                 case 'get-group-members':
                     break;
+                case 'add-group':
+                    AddGroup(messageObj.data, msgCode);
+                    break;
                 case 'mongo-response':
                     sendMessage('wss', 'success', {"msgCode": msgCode, data: {operation: messageObj['operation'], response: messageObj['response']}})
                     break;
@@ -212,6 +215,31 @@ function EditStats(data, msgCode){
 
     if(valid){
         sendMessage('mongo', 'edit-stats--' + msgCode, data);
+    } else {
+        sendMessage('wss', 'error', { type: "bad-format", message: "Request improperly formatted", 'msgCode': msgCode })
+    }
+}
+
+function AddGroup(data, msgCode){
+    let targetKeys = ['userId', 'groupId']
+    let actualKeys = Object.keys(data);
+
+    let valid = VerifyStructure(targetKeys, actualKeys);
+
+    if(valid){
+        sendMessage('mongo', 'add-group-to-user--' + msgCode, data);
+    } else {
+        sendMessage('wss', 'error', { type: "bad-format", message: "Request improperly formatted", 'msgCode': msgCode })
+    }
+}
+
+function CheckRequest(data, msgCode, mongoCode, targetKeys){
+    let actualKeys = Object.keys(data);
+
+    let valid = VerifyStructure(targetKeys, actualKeys);
+
+    if(valid){
+        sendMessage('mongo', mongoCode + msgCode, data);
     } else {
         sendMessage('wss', 'error', { type: "bad-format", message: "Request improperly formatted", 'msgCode': msgCode })
     }

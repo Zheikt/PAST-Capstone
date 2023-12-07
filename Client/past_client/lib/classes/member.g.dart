@@ -10,7 +10,7 @@ Member _$MemberFromJson(Map<String, dynamic> json) => Member(
       userId: json['userId'] as String,
       nickname: json['nickname'] as String,
       roles: (json['roles'] as List<dynamic>)
-          .map((e) => Role.fromJson(e as Map<String, dynamic>))
+          .map((e) => e as String)
           .toList(),
     );
 

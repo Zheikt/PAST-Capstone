@@ -62,6 +62,7 @@ async function CreateConsumer() {
                     break;
                 case 'get-channel-messages':
                     GetChannelMessages(messageObj.data, msgCode);
+                    break;
                 case 'mongo-response':
                     sendMessage('wss', 'success', { "msgCode": msgCode, data: {operation: messageObj['operation'], response: messageObj['response']} })
                     break;
@@ -148,7 +149,7 @@ function GetChannel(data, msgCode) {
 }
 
 function GetGroupChannels(data, msgCode) {
-    let targetKeys = ['groupId', 'channelIds']
+    let targetKeys = ['channelIds']
     let acutalKeys = Object.keys(data);
 
     let valid = VerifyStructure(targetKeys, acutalKeys);
@@ -163,7 +164,7 @@ function GetGroupChannels(data, msgCode) {
 function CreateMessage(data, msgCode) {
     const idChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz012345679'
     //verify structure
-    let targetKeys = ['sender', 'recipient', 'content', 'channelId'];
+    let targetKeys = ['sender', 'recipient', 'content'];
     let acutalKeys = Object.keys(data);
 
     let valid = VerifyStructure(targetKeys, acutalKeys);
@@ -196,7 +197,7 @@ function GetMessage(data, msgCode) {
 }
 
 function GetChannelMessages(data, msgCode) {
-    let targetKeys = ['channelId', 'messageIds']
+    let targetKeys = ['messageIds']
     let acutalKeys = Object.keys(data);
 
     let valid = VerifyStructure(targetKeys, acutalKeys);

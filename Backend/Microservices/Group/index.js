@@ -22,7 +22,8 @@ async function createConsumer() {
             console.log(Object.keys(messageObj))
             let msgCode = messageObj['msgCode'];
             if (!msgCode) msgCode = message.key.toString().split('--')[1];
-            console.log(msgCode);let switchTarget = message.key.toString();
+            console.log(msgCode);
+            let switchTarget = message.key.toString();
             if(!switchTarget.startsWith('mongo')) {switchTarget = messageObj.operation;}
             console.log(switchTarget);
             switch (switchTarget) {
@@ -31,6 +32,7 @@ async function createConsumer() {
                     break;
                 case 'get-group-by-name':
                     GetGroupByName(messageObj.data, msgCode);
+                    break;
                 case 'create':
                     CreateGroup(messageObj.data, msgCode);
                     break;
@@ -99,7 +101,7 @@ function GetGroup(data, msgCode) {
 }
 
 function GetGroupByName(data, msgCode){
-    let targetKeys = ['name'];
+    let targetKeys = ['name']; //add userId
     let acutalKeys = Object.keys(data);
 
     let valid = VerifyStructure(targetKeys, acutalKeys);

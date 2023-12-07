@@ -117,7 +117,7 @@ async function main() {
                     DeleteChannel(messageObj, msgCode);
                     break;
                 case 'get-group-channels':
-                    GetGroupChannels(messageObj.userId, msgCode);
+                    GetGroupChannels(messageObj, msgCode);
                     break;
                 case 'rename-channel':
                     RenameChannel(messageObj, msgCode);
@@ -142,7 +142,7 @@ async function main() {
                     break;
                 case 'delete-message':
                     DeleteMessage(messageObj, msgCode);
-                break;
+                    break;
                 default:
                     console.log("No match found. Key: " + message.key);
                     break;
@@ -293,34 +293,57 @@ function ChangePasswordOperation(data, msgCode) {
     })
 }
 
-function EditStats(data, msgCode){
-    User.update({id: data.userId, 'stats.groupId': data.groupId }, {'stats.$.stats': data.stats}, function (res){
+function EditStats(data, msgCode) {
+    User.update({ id: data.userId, 'stats.groupId': data.groupId }, { 'stats.$.stats': data.stats }, function (res) {
         if (res.matchedCount == 0) {
             sendMessage('user', 'mongo-error-response', { type: 'user-error', message: 'No user found with id:' + data.userId, 'msgCode': msgCode })
         } else {
-            sendMessage('user', 'mongo-response', { operation: 'edit-stats', response: {...res, 'userId': data.userID}, status: 'success', 'msgCode': msgCode });
+            sendMessage('user', 'mongo-response', { operation: 'edit-stats', response: { ...res, 'userId': data.userID }, status: 'success', 'msgCode': msgCode });
         }
     })
 }
 
-function CheckAuthToken(data, msgCode){
+function AddGroup(data, msgCode) {
+    User.updateList({ id: data.userId }, { 'groupIds': data.groupId }, function (res) {
+        if (res.id == data.groupId) {
+            sendMessage('user', 'mongo-response', { operation: 'add-group-to-user', response: res, status: 'success', 'msgCode': msgCode });
+        } else {
+            sendMessage('user', 'mongo-error-response', { type: 'user-error', message: 'No User found with id: ' + data.userId, msgCode: msgCode });
+        }
+    })
+}
+
+async function AddGroupAsync(data, msgCode) {
+    let resp = { success: false };
+    await User.updateList({ id: data.userId }, { 'groupIds': data.groupId }, function (res) {
+        if (res.id == data.groupId) {
+            resp.success = true;
+            resp['response'] = res;
+        } else {
+            resp['message'] = 'No User found with id: ' + data.userId;
+        }
+    })
+    return resp;
+}
+
+function CheckAuthToken(data, msgCode) {
     console.log(data);
-    User.read({'id': data.userId, 'validAuthTokens.token': data.authToken.token}).then(res => {
+    User.read({ 'id': data.userId, 'validAuthTokens.token': data.authToken.token }).then(res => {
         console.log(res);
-        if(res.length > 0){
+        if (res.length > 0) {
             let targetTokens = res[0].validAuthTokens.filter(elem => elem.token == data.authToken.token && elem.validUntil >= Date.now());
             console.log(targetTokens);
-            if(targetTokens.length > 0){
+            if (targetTokens.length > 0) {
                 console.log("Success");
-                sendMessage('wss', 'mongo-response', {operation: 'check-token', 'status': 'success', response: res, 'msgCode': msgCode})
+                sendMessage('wss', 'mongo-response', { operation: 'check-token', 'status': 'success', response: res, 'msgCode': msgCode })
             } else {
                 console.log('Fail');
-                sendMessage('wss', 'mongo-error-response', {operation: 'check-token', 'status': 'failure', message: 'The token provided was out of date', 'msgCode': msgCode});
+                sendMessage('wss', 'mongo-error-response', { operation: 'check-token', 'status': 'failure', message: 'The token provided was out of date', 'msgCode': msgCode });
                 let validTokens = res[0].validAuthTokens.filter(elem => elem.validUntil > Date.now());
-                User.update({'id': data.userId}, {validAuthTokens: validTokens}, (resp) => console.log('Remove Expired Tokens resp: ' + resp));
+                User.update({ 'id': data.userId }, { validAuthTokens: validTokens }, (resp) => console.log('Remove Expired Tokens resp: ' + resp));
             }
         } else {
-            sendMessage('wss', 'mongo-error-response', {operation: 'check-token', 'status': 'failure', message: 'No user found with id: ' + data.userId + ' and token: ' + data.token, 'msgCode': msgCode})
+            sendMessage('wss', 'mongo-error-response', { operation: 'check-token', 'status': 'failure', message: 'No user found with id: ' + data.userId + ' and token: ' + data.token, 'msgCode': msgCode })
         }
     })
 }
@@ -329,16 +352,62 @@ function CheckAuthToken(data, msgCode){
 //#region Group Operations
 
 function CreateGroup(data, msgCode) {
-    let groupObj = {id: data.id, name: data.name, statBlock: data.statBlock, members: data.members, events: data.events, roles: data.roles, queue: data.queue, channels: data.channels}
-    Group.create(groupObj, function (res, err) {
+    let groupObj = { id: data.id, name: data.name, statBlock: data.statBlock, members: data.members, events: data.events, roles: data.roles, queue: data.queue, channels: data.channels }
+    Group.create(groupObj, async function (res, err) {
         console.log(err);
         console.log(res);
         if (err) {
             console.log(err);
             sendMessage('group', 'mongo-error-response', { type: 'mongo-error', message: err, 'msgCode': msgCode })
         } else {
-            //sendMessage('group', 'mongo-response', { operation: 'create-group', response: res, status: 'success', 'msgCode': msgCode })
-            sendMessage('message', 'create-channel', { name: 'general', roleRestrictions: [], groupId: data.id});
+            let id = 'c-';
+            let idChars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            while (id.length < 8) {
+                id += idChars[Math.trunc((Math.random() * idChars.length))];
+            }
+            let mcObj = { id: id, name: 'Common Chat', roleRestrictions: [], blacklist: [], messages: [] }
+            MessageChannel.create(mcObj, function (mcRes, err) {
+                if (err) {
+                    sendMessage('group', 'mongo-error-response', { type: 'mongo-error', message: err, 'msgCode': msgCode })
+                } else {
+                    Group.updateList({ id: data.id }, { 'channels': id }, function (gRes) {
+                        console.log(gRes);
+                        if (gRes.id == data.id) {
+                            User.updateList({ id: data.creatorId }, { 'groupIds': gRes.id }, function (uRes) {
+                                if (uRes.id == data.creatorId) {
+                                    User.updateList({ id: data.creatorId }, { 'stats': { "groupId": data.id, "stats": data.statBlock } }, function (u2Res) {
+                                        if (u2Res.id == data.creatorId) {
+                                            sendMessage('group', 'mongo-response', { operation: 'create-group', response: gRes, status: 'success', 'msgCode': msgCode })
+                                        } else {
+                                            sendMessage('group', 'mongo-error-response', { type: 'mongo-error', message: err, 'msgCode': msgCode })
+                                        }
+                                    })
+                                } else {
+                                    sendMessage('group', 'mongo-error-response', { type: 'mongo-error', message: err, 'msgCode': msgCode })
+                                }
+                            })
+                        } else {
+                            sendMessage('group', 'mongo-error-response', { type: 'mongo-error', message: err, 'msgCode': msgCode })
+                        }
+                    })
+                }
+            })
+            //sendMessage('message', 'create-channel--' + msgCode, { name: 'Common Chat', roleRestrictions: [], groupId: data.id });
+            // let channelRes = await CreateChannelAsync({ name: 'Common Chat', roleRestrictions: [], groupId: data.id }, msgCode);
+            // let userRes = await AddGroupAsync({ groupId: data.id, userId: data.members[0].userId }, msgCode);
+            // console.log(channelRes);
+            // console.log(userRes);
+            // if (userRes.success == false) {
+            //     sendMessage('group', 'mongo-error-response', { type: 'user-error', message: userRes.message });
+            //     return;
+            // }
+            // if (channelRes.success == false) {
+            //     console.log('Channel fail');
+            //     sendMessage('group', 'mongo-error-response', { type: 'user-error', message: channelRes.message });
+            //     return;
+            // }
+
+            //sendMessage('user', 'add-group--' + msgCode, {groupId: data.id, userId: data.members[0].userId});
         }
     })
 }
@@ -354,8 +423,8 @@ function GetGroup(groupId, msgCode) {
     });
 }
 
-function GetGroupByName(data, msgCode){
-    Group.read({'name': data.name}).then(res => {
+function GetGroupByName(data, msgCode) { //TODO: modify to filter out groups with a member containing the userId
+    Group.read({ 'name': { "$regex": data.name, "$options": 'i' } }).then(res => {
         if (res.length == 0) {
             sendMessage('group', 'mongo-error-response', { type: 'user-error', message: 'No group found with id: ' + groupId, msgCode: msgCode })
         }
@@ -366,7 +435,7 @@ function GetGroupByName(data, msgCode){
 }
 
 function DeleteGroup(groupId, msgCode) {
-    Group.delete({ 'id': groupId }, function(res) {
+    Group.delete({ 'id': groupId }, function (res) {
         if (res.id == groupId) {
             sendMessage('group', 'mongo-response', { operation: 'delete-group', response: res, status: 'success', 'msgCode': msgCode });
         } else {
@@ -376,9 +445,9 @@ function DeleteGroup(groupId, msgCode) {
 }
 
 function ChangeGroupName(data, msgCode) {
-    Group.update({id: data.groupId}, {name: data.name}, function(res){
-        if(res.id == data.groupId){
-            sendMessage('group', 'mongo-response', {operation: 'change-group-name', response: res, status: 'success', 'msgCode': msgCode});
+    Group.update({ id: data.groupId }, { name: data.name }, function (res) {
+        if (res.id == data.groupId) {
+            sendMessage('group', 'mongo-response', { operation: 'change-group-name', response: res, status: 'success', 'msgCode': msgCode });
         } else {
             sendMessage('group', 'mongo-error-response', { type: 'user-error', message: 'No Group found with id: ' + data.groupId, 'msgCode': msgCode })
         }
@@ -386,15 +455,38 @@ function ChangeGroupName(data, msgCode) {
 }
 
 function JoinGroup(data, msgCode) {
-    Group.read({ 'id': data.groupId }).then(res => {
-        let newMembers = res[0].members;
-        newMembers.push({userId: data.userId, roles: [], nickname: data.username});
-        if(res.length > 0){
-            Group.update({'id': data.groupId}, {members: newMembers}, function(resp){
-                console.log(resp)
-                if(resp.id == data.groupId){
-                    sendMessage('group', 'mongo-response', {operation: 'join-group', response: resp, status: 'success', 'msgCode': msgCode});
+    Group.updateList({ 'id': data.groupId }, { 'members': { userId: data.userId, roles: [], nickname: data.username } }, function (res) {
+        if (res.id == data.groupId) {
+            User.updateList({ id: data.userId }, { 'groupIds': res.groupId }, function (uRes) {
+                if (uRes.id == data.userId) {
+                    User.updateList({ id: data.userId }, { 'stats': { "groupId": data.groupId, "stats": res.statBlock } }, function (u2Res) {
+                        if (u2Res.id == data.userId) {
+                            sendMessage('group', 'mongo-response', { operation: 'join-group', response: res, status: 'success', 'msgCode': msgCode })
+                        } else {
+                            sendMessage('group', 'mongo-error-response', { type: 'mongo-error', message: err, 'msgCode': msgCode })
+                        }
+                    })
                 } else {
+                    sendMessage('group', 'mongo-error-response', { type: 'mongo-error', message: err, 'msgCode': msgCode })
+                }
+            })
+        } else {
+            sendMessage('group', 'mongo-error-response', { type: 'user-error', message: 'Unable to add User with id ' + data.userId + ' to the Group with id ' + data.groupId, msgCode: msgCode });
+        }
+    });
+}
+
+function LeaveGroup(data, msgCode) {
+    Group.read({ 'id': data.groupId }).then(res => {
+        let newMembers = res[0].members.filter(elem => elem.userId != data.userId);
+        if (res.length > 0) {
+            console.log("Finished Read")
+            Group.update({ 'id': data.groupId }, { members: newMembers }, function (resp) {
+                console.log(resp);
+                if (resp.id == data.groupId) {
+                    sendMessage('group', 'mongo-response', { operation: 'leave-group', response: resp, status: 'success', 'msgCode': msgCode });
+                } else {
+                    console.log("Failed Update");
                     sendMessage('group', 'mongo-error-response', { type: 'user-error', message: 'No Group found with id: ' + data.groupId, 'msgCode': msgCode })
                 }
             });
@@ -404,58 +496,51 @@ function JoinGroup(data, msgCode) {
     });
 }
 
-function LeaveGroup(data, msgCode) {
-    Group.read({ 'id': data.groupId }).then(res => {
-        let newMembers = res[0].members.filter(elem => elem.userId != data.userId);
-        if(res.length > 0){
-            console.log("Finished Read")
-        Group.update({'id': data.groupId}, {members: newMembers}, function(resp){
-            console.log(resp);
-            if(resp.id == data.groupId){
-                sendMessage('group', 'mongo-response', {operation: 'leave-group', response: resp, status: 'success', 'msgCode': msgCode});
-            } else {
-                console.log("Failed Update");
-                sendMessage('group', 'mongo-error-response', { type: 'user-error', message: 'No Group found with id: ' + data.groupId, 'msgCode': msgCode })
-            }
-        });
-    } else {
-        sendMessage('group', 'mongo-error-response', { type: 'user-error', message: 'No Group found with id: ' + data.groupId, 'msgCode': msgCode })
-    }
-    });
-}
-
 function GetUserGroups(userId, msgCode) {
     Group.read({ 'members.userId': userId }).then(res => {
         sendMessage('group', 'mongo-response', { operation: 'get-user-groups', response: res, status: 'success', 'msgCode': msgCode });
     });
 }
 
-function AddChannel(data, msgCode){
-    Group.updateList({id: data.groupId}, {'channels': data.channelId}, function (res){
-        if(res.id == data.groupId){
-            sendMessage('group', 'mongo-response', {operation: 'add-channel', response: res, status: 'success', 'msgCode': msgCode});
+function AddChannel(data, msgCode) {
+    Group.updateList({ id: data.groupId }, { 'channels': data.channelId }, function (res) {
+        if (res.id == data.groupId) {
+            sendMessage('group', 'mongo-response', { operation: 'add-channel', response: res, status: 'success', 'msgCode': msgCode });
         } else {
-            sendMessage('group', 'mongo-error-response', {type: 'user-error', message: 'No Group found with id: ' + data.groupId, msgCode: msgCode})
+            sendMessage('group', 'mongo-error-response', { type: 'user-error', message: 'No Group found with id: ' + data.groupId, msgCode: msgCode })
         }
     });
 }
 
-function RemoveChannel(data, msgCode){
-    Group.removeFromList({id: data.groupId}, {'channels': data.channelId}, function (res){
-        if(res.id == data.groupId){
-            sendMessage('message', 'mongo-response', {operation: 'remove-channel', response: res, status: 'success', 'msgCode': msgCode});
+async function AddChannelAsync(data, msgCode) {
+    let resp = { success: false };
+    await Group.updateList({ id: data.groupId }, { 'channels': data.channelId }, function (res) {
+        if (res.id == data.groupId) {
+            resp.success = true;
+            resp['response'] = res;
         } else {
-            sendMessage('message', 'mongo-error-response', {type: 'user-error', message: 'No Group found with id: ' + data.groupId, msgCode: msgCode})
+            resp['message'] = "No Group found with id: " + data.groupId;
+        }
+    });
+    return resp;
+}
+
+function RemoveChannel(data, msgCode) {
+    Group.removeFromList({ id: data.groupId }, { 'channels': data.channelId }, function (res) {
+        if (res.id == data.groupId) {
+            sendMessage('message', 'mongo-response', { operation: 'remove-channel', response: res, status: 'success', 'msgCode': msgCode });
+        } else {
+            sendMessage('message', 'mongo-error-response', { type: 'user-error', message: 'No Group found with id: ' + data.groupId, msgCode: msgCode })
         }
     });
 }
 
-function RemoveUser(data, msgCode){
-    Group.removeFromManyLists({}, {'members.$.userId': data.userId}, function(res){
-        if(res.id == data.messageId){
-            sendMessage('message', 'mongo-response', {operation: 'remove-user', response: res, status: 'success', 'msgCode': msgCode});
+function RemoveUser(data, msgCode) {
+    Group.removeFromManyLists({}, { 'members.$.userId': data.userId }, function (res) {
+        if (res.id == data.messageId) {
+            sendMessage('message', 'mongo-response', { operation: 'remove-user', response: res, status: 'success', 'msgCode': msgCode });
         } else {
-            sendMessage('message', 'mongo-error-response', {type: 'user-error', message: 'No Group found with id: ' + data.groupId, msgCode: msgCode})
+            sendMessage('message', 'mongo-error-response', { type: 'user-error', message: 'No Group found with id: ' + data.groupId, msgCode: msgCode })
         }
     });
 }
@@ -464,8 +549,8 @@ function RemoveUser(data, msgCode){
 
 //#region MessageChannel Operations
 
-function CreateChannel(data, msgCode){
-    let mcObj = {id: data.id, name: data.name, roleRestrictions: data.roleRestrictions, blacklist: [], messages: []}
+function CreateChannel(data, msgCode) {
+    let mcObj = { id: data.id, name: data.name, roleRestrictions: data.roleRestrictions, blacklist: [], messages: [] }
     MessageChannel.create(mcObj, function (res, err) {
         console.log(err);
         console.log(res);
@@ -474,68 +559,108 @@ function CreateChannel(data, msgCode){
             sendMessage('message', 'mongo-error-response', { type: 'mongo-error', message: err, 'msgCode': msgCode })
         } else {
             //sendMessage('message', 'mongo-response', { operation: 'create-message-channel', response: res, status: 'success', 'msgCode': msgCode })
-            sendMessage('group', 'add-channel', {groupId: data.groupId, channelId: data.id});
+            sendMessage('group', 'add-channel', { groupId: data.groupId, channelId: data.id })
         }
     })
 }
 
-function RenameChannel(data, msgCode){
-    MessageChannel.update({id: data.channelId}, {name: data.name}, function(res){
-        if(res.matchedCount > 0){
-            sendMessage('message', 'mongo-response', {operation: 'rename-channel', response: res, status: 'success', 'msgCode': msgCode});
+async function CreateChannelAsync(data, msgCode) {
+    console.log("Create Channel Async");
+    let id = 'c-';
+    let idChars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    while (id.length < 8) {
+        id += idChars[Math.trunc((Math.random() * idChars.length))];
+    }
+    let mcObj = { id: id, name: data.name, roleRestrictions: data.roleRestrictions, blacklist: [], messages: [] }
+    let resp = { success: false };
+    await MessageChannel.create(mcObj, async function (res, err) {
+        console.log(err);
+        console.log(res);
+        if (err) {
+            console.log(err);
+            resp['message'] = err;
+        } else {
+            //sendMessage('message', 'mongo-response', { operation: 'create-message-channel', response: res, status: 'success', 'msgCode': msgCode })
+            resp = await AddChannelAsync({ groupId: data.groupId, channelId: data.id }, msgCode);
+        }
+    })
+    return resp;
+}
+
+function RenameChannel(data, msgCode) {
+    MessageChannel.update({ id: data.channelId }, { name: data.name }, function (res) {
+        if (res.matchedCount > 0) {
+            sendMessage('message', 'mongo-response', { operation: 'rename-channel', response: res, status: 'success', 'msgCode': msgCode });
         } else {
             sendMessage('message', 'mongo-error-response', { type: 'user-error', message: 'No Channel found with id: ' + data.channelId, 'msgCode': msgCode })
         }
     })
 }
 
-function DeleteChannel(data, msgCode){
-    MessageChannel.delete({id: data.channelId}, function(res){
+function DeleteChannel(data, msgCode) {
+    MessageChannel.delete({ id: data.channelId }, function (res) {
         if (res.id == data.channelId) {
             //sendMessage('message', 'mongo-response', { operation: 'delete-channel', response: res, status: 'success', 'msgCode': msgCode });
-            sendMessage('group', 'remove-channel', {groupId: data.groupId, channelId: data.id, 'msgCode': msgCode});
+            sendMessage('group', 'remove-channel', { groupId: data.groupId, channelId: data.id, 'msgCode': msgCode });
         } else {
             sendMessage('message', 'mongo-error-response', { type: 'user-error', message: 'No Channel found with id: ' + data.channelId, 'msgCode': msgCode })
         }
     })
 }
 
-function GetChannel(data, msgCode){
-    MessageChannel.read({id: data.channelId}).then(function(resp){
-        if(resp.length > 0){
+function GetChannel(data, msgCode) {
+    MessageChannel.read({ id: data.channelId }).then(function (resp) {
+        if (resp.length > 0) {
             sendMessage('message', 'mongo-response', { operation: 'get-channel', response: resp, status: 'success', 'msgCode': msgCode })
-        } else [
+        } else[
             sendMessage('message', 'mongo-error-response', { type: 'user-error', message: 'No Channel found with id: ' + data.channelId, 'msgCode': msgCode })
         ]
     })
 }
 
-function GetGroupChannels(data, msgCode){
-    MessageChannel.aggregate([{"$match": {id: {"$in": data.channelIds}}}]).then((res) => {
-        if(response.length < 0){
-            sendMessage('message', 'mongo-response', {operation: 'get-group-channels', response: res, status: 'success', 'msgCode': msgCode})
-        } else {
-            sendMessage('message', 'mongo-error-response', {type: 'user-error', message: 'No channels found with ids: ' + data.channelIds, 'msgCode': msgCode })
+function GetGroupChannels(data, msgCode) {
+    MessageChannel.read({}).then(function(resp){
+        console.log(resp);
+        let channels = [];
+        for(let index = 0; index < resp.length; index++){
+            console.log(resp[index]);
+            for(let innerInd = 0; innerInd < data.channelIds.length; innerInd++){
+                console.log(data.channelIds[innerInd]);
+                if(data.channelIds[innerInd] == resp[index].id){
+                    channels.push(resp[index]);
+                    break;
+                }
+            }
+            
         }
+        console.log(channels);
+        sendMessage('message', 'mongo-response', {operation: 'get-group-channels', response: channels, status: 'success', msgCode: msgCode});
     })
+    // MessageChannel.aggregate([{ "$match": { id: { "$in": data.channelIds } } }]).then((res) => {
+    //     if (response.length < 0) {
+    //         sendMessage('message', 'mongo-response', { operation: 'get-group-channels', response: res, status: 'success', 'msgCode': msgCode })
+    //     } else {
+    //         sendMessage('message', 'mongo-error-response', { type: 'user-error', message: 'No channels found with ids: ' + data.channelIds, 'msgCode': msgCode })
+    //     }
+    // })
 }
 
-function AddMessage(data, msgCode){
-    MessageChannel.updateList({id: data.channelId}, {'messages': data.messageId}, function (res){
-        if(res.id == data.groupId){
-            sendMessage('message', 'mongo-response', {operation: 'add-message', response: res, status: 'success', 'msgCode': msgCode});
+function AddMessage(data, msgCode) {
+    MessageChannel.updateList({ id: data.channelId }, { 'messages': data.messageId }, function (res) {
+        if (res.id == data.groupId) {
+            sendMessage('message', 'mongo-response', { operation: 'add-message', response: res, status: 'success', 'msgCode': msgCode });
         } else {
-            sendMessage('message', 'mongo-error-response', {type: 'user-error', message: 'No Channel found with id: ' + data.channelId, msgCode: msgCode})
+            sendMessage('message', 'mongo-error-response', { type: 'user-error', message: 'No Channel found with id: ' + data.channelId, msgCode: msgCode })
         }
     });
 }
 
-function RemoveMessage(data, msgCode){
-    MessageChannel.removeFromList({id: data.channelId}, {'messages': data.messageId}, function (res){
-        if(res.id == data.messageId){
-            sendMessage('message', 'mongo-response', {operation: 'remove-message', response: res, status: 'success', 'msgCode': msgCode});
+function RemoveMessage(data, msgCode) {
+    MessageChannel.removeFromList({ id: data.channelId }, { 'messages': data.messageId }, function (res) {
+        if (res.id == data.messageId) {
+            sendMessage('message', 'mongo-response', { operation: 'remove-message', response: res, status: 'success', 'msgCode': msgCode });
         } else {
-            sendMessage('message', 'mongo-error-response', {type: 'user-error', message: 'No Channel found with id: ' + data.channelId, msgCode: msgCode})
+            sendMessage('message', 'mongo-error-response', { type: 'user-error', message: 'No Channel found with id: ' + data.channelId, msgCode: msgCode })
         }
     });
 }
@@ -544,21 +669,29 @@ function RemoveMessage(data, msgCode){
 
 //#region Message Operations
 
-function CreateMessage(data, msgCode){
-    let msgObj = {id: data.id, sender: data.sender, recipient: data.recipient, content: data.content, timestamp: Date.now()};
+function CreateMessage(data, msgCode) {
+    let msgObj = { id: data.id, sender: data.sender, recipient: data.recipient, content: data.content, timestamp: Date.now() };
 
-    Message.create(msgObj, function(res, err){
+    Message.create(msgObj, function (res, err) {
         if (err) {
             console.log(err);
             sendMessage('message', 'mongo-error-response', { type: 'mongo-error', message: err, 'msgCode': msgCode })
         } else {
-            sendMessage('message', 'mongo-response', { operation: 'create-message', response: res, status: 'success', 'msgCode': msgCode })
+            MessageChannel.updateList({ id: data.recipient }, { 'messages': data.id }, function (res2) {
+                if (res2.id == data.recipient) {
+                    //sendMessage('message', 'mongo-response', { operation: 'add-message', response: res, status: 'success', 'msgCode': msgCode });
+                    sendMessage('message', 'mongo-response', { operation: 'create-message', response: res, status: 'success', 'msgCode': msgCode });
+                } else {
+                    sendMessage('message', 'mongo-error-response', { type: 'user-error', message: 'No Channel found with id: ' + data.channelId, msgCode: msgCode })
+                }
+            });
+            
         }
     })
 }
 
-function GetMessage(data, msgCode){
-    Message.read({id: data.messageId}).then(res => {
+function GetMessage(data, msgCode) {
+    Message.read({ id: data.messageId }).then(res => {
         if (res.length == 0) {
             sendMessage('message', 'mongo-error-response', { type: 'user-error', message: 'No message found with id: ' + data.messageId, msgCode: msgCode })
         }
@@ -568,33 +701,48 @@ function GetMessage(data, msgCode){
     })
 }
 
-function GetChannelMessages(data, msgCode){
-    Message.aggregate([{"$match": {id: {"$in": data.messageIds}}}]).then(res => {
-        if (res.length == 0) {
-            sendMessage('message', 'mongo-error-response', { type: 'user-error', message: 'No message found with id: ' + data.messageIds, msgCode: msgCode })
+function GetChannelMessages(data, msgCode) {
+    Message.read({}).then(function(resp){
+        let messages = [];
+        for(let index = 0; index < resp.length; index++){
+            console.log(resp[index]);
+            for(let innerInd = 0; innerInd < data.messageIds.length; innerInd++){
+                console.log(data.messageIds[innerInd]);
+                if(data.messageIds[innerInd] == resp[index].id){
+                    messages.push(resp[index]);
+                    break;
+                }
+            }
+            
         }
-        else {
-            sendMessage('message', 'mongo-response', { operation: 'get-channel-messages', response: res, status: 'success', 'msgCode': msgCode });
+        sendMessage('message', 'mongo-response', {operation: 'get-channel-messages', response: messages, status: 'success', msgCode: msgCode});
+    })
+    // Message.aggregate([{ "$match": { id: { "$in": data.messageIds } } }]).then(res => {
+    //     if (res.length == 0) {
+    //         sendMessage('message', 'mongo-error-response', { type: 'user-error', message: 'No message found with id: ' + data.messageIds, msgCode: msgCode })
+    //     }
+    //     else {
+    //         sendMessage('message', 'mongo-response', { operation: 'get-channel-messages', response: res, status: 'success', 'msgCode': msgCode });
+    //     }
+    // })
+}
+
+function EditMessage(data, msgCode) {
+    Message.update({ id: data.messageId }, { "content": data.newContent, "timestamp": Date.now() }, function (res) {
+        if (res.id == data.messageId) {
+            sendMessage('message', 'mongo-response', { operation: 'edit-message', response: res, status: 'success', 'msgCode': msgCode });
+        } else {
+            sendMessage('message', 'mongo-error-response', { type: 'user-error', message: 'No message found with id: ' + data.messageId, msgCode: msgCode })
         }
     })
 }
 
-function EditMessage(data, msgCode){
-    Message.update({id: data.messageId}, {"content": data.newContent, "timestamp": Date.now()}, function(res){
-        if(res.id == data.messageId){
-            sendMessage('message', 'mongo-response', {operation: 'edit-message', response: res, status: 'success', 'msgCode': msgCode});
+function DeleteMessage(data, msgCode) {
+    Message.delete({ id: data.messageId }, function (res) {
+        if (res.id == data.messageId) {
+            sendMessage('message', 'mongo-response', { operation: 'delete-message', response: res, status: 'success', 'msgCode': msgCode });
         } else {
-            sendMessage('message', 'mongo-error-response', {type: 'user-error', message: 'No message found with id: ' + data.messageId, msgCode: msgCode})
-        }
-    })
-}
-
-function DeleteMessage(data, msgCode){
-    Message.delete({id: data.messageId}, function(res){
-        if(res.id == data.messageId){
-            sendMessage('message', 'mongo-response', {operation: 'delete-message', response: res, status: 'success', 'msgCode': msgCode});
-        } else {
-            sendMessage('message', 'mongo-error-response', {type: 'user-error', message: 'No message found with id: ' + data.messageId, msgCode: msgCode})
+            sendMessage('message', 'mongo-error-response', { type: 'user-error', message: 'No message found with id: ' + data.messageId, msgCode: msgCode })
         }
     })
 }

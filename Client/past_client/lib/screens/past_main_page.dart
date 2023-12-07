@@ -25,7 +25,8 @@ class PastMainPage extends StatelessWidget {
       stream: controller.stream,
       builder: ((context, snapshot) {
         if (snapshot.connectionState == ConnectionState.active &&
-            snapshot.hasData) {
+            snapshot.hasData &&
+            snapshot.data is! List) {
           if (snapshot.data is String && snapshot.data == '__ping__') {
             connection.sendMessage(Request(
                 operation: '__pong__',
@@ -36,19 +37,19 @@ class PastMainPage extends StatelessWidget {
             if (data is! List && data['result'] == 'Successful Auth') {
               user = User.fromJson(data['data'][0]);
             }
-
-            if (user != null) {
-              return GroupSelect(
-                connection: connection,
-                user: user!,
-                controller: controller,
-              );
-            }
           }
         }
 
         if (snapshot.connectionState == ConnectionState.done) {
           Navigator.pop(context);
+        }
+        
+        if (user != null) {
+          return GroupSelect(
+            connection: connection,
+            user: user!,
+            controller: controller,
+          );
         }
 
         return Scaffold(

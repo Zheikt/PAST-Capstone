@@ -33,12 +33,14 @@ const statSchema = mongoose.Schema({
     groupId: {
         type: String,
         unique: false,
-        required: true
+        required: true,
+        sparse: true,
     },
     groupName: {
         type: String,
         unique: false,
-        required: true
+        required: true,
+        sparse: true
     },
     stats: Object
 })

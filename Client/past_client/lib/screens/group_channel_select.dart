@@ -4,7 +4,9 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:past_client/classes/channel.dart';
 import 'package:past_client/classes/group.dart';
+import 'package:past_client/classes/message_channel.dart';
 import 'package:past_client/classes/request.dart';
+import 'package:past_client/classes/role.dart';
 import 'package:past_client/classes/user.dart';
 import 'package:past_client/classes/ws_connector.dart';
 import 'package:past_client/screens/create_channel_dialog.dart';
@@ -31,7 +33,7 @@ class GroupChannelSelect extends StatefulWidget {
 }
 
 class _GroupChannelSelectState extends State<GroupChannelSelect> {
-  late List<Channel> channels;
+  late List<Channel> channels = [];
   bool canRename = false;
   bool canAddDeleteChannel = false;
 
@@ -39,20 +41,38 @@ class _GroupChannelSelectState extends State<GroupChannelSelect> {
   void initState() {
     super.initState();
     widget.connection.sendMessage(Request(
-        operation: 'get-user-groups',
-        service: 'group',
-        data: {'userId': widget.user.id}));
-    canRename = widget.group.members
+        operation: 'get-group-channels',
+        service: 'message',
+        data: {'channelIds': widget.group.channels}));
+
+    List<String> memberRoles = widget.group.members
         .firstWhere((element) => element.userId == widget.user.id)
-        .roles
-        .where((element) => element.permissions.contains('rename-channel'))
-        .isNotEmpty;
-    canAddDeleteChannel = widget.group.members
-        .firstWhere((element) => element.userId == widget.user.id)
-        .roles
-        .where(
-            (element) => element.permissions.contains('create-destroy-channel'))
-        .isNotEmpty;
+        .roles;
+    canRename = false;
+    canAddDeleteChannel = false;
+    for (var element in memberRoles) {
+      Role role = widget.group.availableRoles
+          .firstWhere((roleElem) => element == roleElem.name);
+      if (role.permissions.contains('rename-channel')) {
+        canRename = true;
+      }
+      if (role.permissions.contains('create-destroy-channel')) {
+        canAddDeleteChannel = true;
+      }
+      if (canRename && canAddDeleteChannel) {
+        break;
+      }
+    }
+    // channels = List.generate(
+    //   widget.group.channels.length,
+    //   (index) => MessageChannel(
+    //     id: widget.group.channels[index].keys.first,
+    //     name: widget.group.channels[index].values.first,
+    //     messages: [],
+    //     roleRestrictions: [],
+    //     blacklist: [],
+    //   ),
+    // );
   }
 
   @override
@@ -81,6 +101,7 @@ class _GroupChannelSelectState extends State<GroupChannelSelect> {
                   return UserProfile(
                     user: widget.user,
                     connection: widget.connection,
+                    controller: widget.controller,
                   );
                 }),
               );
@@ -109,30 +130,45 @@ class _GroupChannelSelectState extends State<GroupChannelSelect> {
               stream: widget.controller.stream,
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.active &&
-                    snapshot.hasData) {
-                  final data = jsonDecode(snapshot.data.toString())['data'];
+                    snapshot.hasData &&
+                    snapshot.data is! List &&
+                    snapshot.data != '__ping__') {
+                  final data = jsonDecode(snapshot.data.toString());
                   switch (data['operation']) {
-                    case 'get-user-groups':
+                    case 'get-group-channels':
                       channels = List.generate(data['response'].length,
                           (index) => Channel.fromJson(data['response'][index]));
                       break;
                     default:
                   }
-                  return ListView.builder(
-                    itemBuilder: (context, index) {
-                      return ListTile(
-                        title: Text(channels[index].name),
-                        leading:
-                            CircleAvatar(child: Text(channels[index].name[0])),
-                        onTap: () {
-                          Navigator.push(
+                }
+
+                if(channels.isNotEmpty){
+                  return Flexible(
+                    child: ListView.builder(
+                      itemBuilder: (context, index) {
+                        return ListTile(
+                          title: Text(channels[index].name),
+                          leading: CircleAvatar(
+                              child: Text(channels[index].name[0])),
+                          onTap: () {
+                            Navigator.push(
                               context,
                               MaterialPageRoute(
-                                  builder: (context) => const GroupMessageChannel()));
-                        },
-                      );
-                    },
-                    itemCount: channels.length,
+                                builder: (context) => GroupMessageChannel(
+                                  user: widget.user,
+                                  connection: widget.connection,
+                                  channel: channels[index],
+                                  controller: widget.controller,
+                                  group: widget.group,
+                                ),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                      itemCount: channels.length,
+                    ),
                   );
                 }
 
@@ -141,6 +177,31 @@ class _GroupChannelSelectState extends State<GroupChannelSelect> {
                 );
               },
             ),
+            // Flexible(
+            //   child: ListView.builder(
+            //     itemBuilder: (context, index) {
+            //       return ListTile(
+            //         title: Text(channels[index].name),
+            //         leading: CircleAvatar(child: Text(channels[index].name[0])),
+            //         onTap: () {
+            //           Navigator.push(
+            //             context,
+            //             MaterialPageRoute(
+            //               builder: (context) => GroupMessageChannel(
+            //                 user: widget.user,
+            //                 connection: widget.connection,
+            //                 channel: channels[index],
+            //                 controller: widget.controller,
+            //                 group: widget.group,
+            //               ),
+            //             ),
+            //           );
+            //         },
+            //       );
+            //     },
+            //     itemCount: channels.length,
+            //   ),
+            // ),
             ElevatedButton(
               onPressed: canAddDeleteChannel
                   ? () => showDialog(

@@ -19,7 +19,7 @@ schema.statics = {
     {
         this.updateOne(query, {$set: data}).then(callback);
     },
-    addtoList: function(query, data, callback)
+    updateList: function(query, data, callback)
     {
         this.findOneAndUpdate(query, {$push: data}).then(callback);
     },

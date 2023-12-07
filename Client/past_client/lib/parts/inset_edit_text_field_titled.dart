@@ -5,9 +5,16 @@ class TitledInsetEditTextField extends StatefulWidget {
   final String title;
   final bool isToggleable;
   final double titleSize;
+  final String? Function(String?)? validator;
 
-  const TitledInsetEditTextField(
-      {super.key, required this.textController, required this.title, this.isToggleable = true, this.titleSize = 14});
+  const TitledInsetEditTextField({
+    super.key,
+    required this.textController,
+    required this.title,
+    required this.validator,
+    this.isToggleable = true,
+    this.titleSize = 14,
+  });
 
   @override
   State<TitledInsetEditTextField> createState() =>
@@ -40,32 +47,39 @@ class _TitledInsetEditTextFieldState extends State<TitledInsetEditTextField> {
           padding: const EdgeInsets.only(left: 7, bottom: 3),
           child: Text(
             widget.title,
-            style: TextStyle(color: Colors.grey.shade300, fontSize: widget.titleSize),
+            style: TextStyle(
+                color: Colors.grey.shade300, fontSize: widget.titleSize),
           ),
         ),
         Flexible(
           flex: 1,
           fit: FlexFit.loose,
-          child: TextField(
+          child: TextFormField(
+            validator: widget.validator,
             controller: widget.textController,
             readOnly: !isEdit && widget.isToggleable,
             decoration: InputDecoration(
-              suffixIcon: widget.isToggleable ? IconButton(
-                onPressed: () => setState(() {
-                  isEdit = !isEdit;
-                }),
-                icon: Icon(isEdit ? Icons.edit_off : Icons.edit),
-                color:
-                    Theme.of(context).colorScheme.inversePrimary.withAlpha(180),
-              ) : null,
+              suffixIcon: widget.isToggleable
+                  ? IconButton(
+                      onPressed: () => setState(() {
+                        isEdit = !isEdit;
+                      }),
+                      icon: Icon(isEdit ? Icons.edit_off : Icons.edit),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .inversePrimary
+                          .withAlpha(180),
+                    )
+                  : null,
               filled: true,
               fillColor: Theme.of(context).colorScheme.inverseSurface,
               border: const OutlineInputBorder(
                 borderRadius: BorderRadius.all(Radius.circular(6)),
               ),
             ),
-            style:
-                TextStyle(color: Theme.of(context).colorScheme.inversePrimary),
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.inversePrimary,
+            ),
           ),
         )
       ],
